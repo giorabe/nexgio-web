@@ -63,7 +63,7 @@ export default function ServiceSelector() {
       description:
         "Manage clients, bandwidth plans, invoices, and payments for your WiFi internet service.",
       isActive: true,
-      path: "/dashboard",
+      path: "/login",
     },
     {
       icon: <Palette className="w-8 h-8" />,

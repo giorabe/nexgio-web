@@ -16,8 +16,8 @@ import PaymentsEntry from "./modules/internet/admin/pages/PaymentsEntry";
 import Settings from "./modules/internet/admin/pages/Settings";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <Login /> },
-  { path: "/services", element: <ServiceSelector /> },
+  { path: "/", element: <ServiceSelector /> },
+  { path: "/login", element: <Login /> },
   {
     path: "/dashboard",
     element: (

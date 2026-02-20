@@ -219,7 +219,6 @@ export default function ReceiptHistory() {
                     }
                   }} className="bg-[#10B981] text-white">Save as Image</Button>
                   <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-                  <Button variant="outline" onClick={()=>setSelected(null)}>Close</Button>
                 </>
               )}
             </div>
