@@ -98,7 +98,7 @@ export default function Invoice() {
     const tierLimit = Number(tier?.deviceLimit ?? 0);
 
     const registeredExtraDevices = Math.max(0, clientDevices - tierLimit);
-    const extraDeviceCharge = registeredExtraDevices * 30;
+    const extraDeviceCharge = registeredExtraDevices * 60;
 
     return {
       basePrice,
@@ -230,7 +230,7 @@ export default function Invoice() {
     const clientDevices = Number(selectedClient.devices ?? 0);
     const tierLimit = Number(tier?.deviceLimit ?? 0);
     const extraDevices = Math.max(0, clientDevices - tierLimit);
-    const extraDeviceCharge = extraDevices * 30;
+    const extraDeviceCharge = extraDevices * 60;
 
     const totalAmount =
       basePrice +
