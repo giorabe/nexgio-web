@@ -1,0 +1,16 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Remove number input spinner (Chrome, Safari, Edge, Opera) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Remove number input spinner (Firefox) */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

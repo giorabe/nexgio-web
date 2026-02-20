@@ -1,0 +1,269 @@
+import { useCallback, useState } from "react";
+import type { ClientUI } from "../types/client.types";
+import type { InvoiceCreateInput, InvoiceRow } from "../types/invoice.types";
+import { useTiers } from "./useTiers";
+import {
+  fetchInvoicesByClient,
+  fetchInvoiceByClientMonth,
+  createInvoice as createInvoiceSvc,
+  listInvoices as listInvoicesSvc,
+  updateInvoiceStatus,
+  patchInvoicePayment,
+  deleteInvoice,
+} from "../services/invoices.service";
+import { createPayment } from "../services/payments.service";
+import { updateClient } from "../services/clients.service";
+
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function formatISODate(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function calcNextDueDateISO(startDateISO: string, now = new Date()): string {
+  const start = new Date(startDateISO);
+  if (Number.isNaN(start.getTime())) return "";
+
+  const day = start.getDate();
+
+  const lastDayOfMonth = (year: number, monthIndex: number) =>
+    new Date(year, monthIndex + 1, 0).getDate();
+
+  let y = now.getFullYear();
+  let m = now.getMonth();
+
+  const candidateDay = Math.min(day, lastDayOfMonth(y, m));
+  let due = new Date(y, m, candidateDay);
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDateOnly = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+
+  if (dueDateOnly <= today) {
+    m += 1;
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+    const nextDay = Math.min(day, lastDayOfMonth(y, m));
+    due = new Date(y, m, nextDay);
+  }
+
+  return formatISODate(due);
+}
+
+function invoiceMonthFromDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function useInvoices() {
+  const { tiers } = useTiers();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchForClient = useCallback(async (clientId: string) => {
+    setLoading(true);
+    const res = await fetchInvoicesByClient(clientId);
+    setLoading(false);
+    if (res.error) throw res.error;
+    return res.data ?? [];
+  }, []);
+
+  const createInvoiceForClient = useCallback(
+    async (
+      client: ClientUI,
+      input: {
+        invoiceNumber?: string | null;
+        unregisteredOvercharge?: number;
+        rebate?: number;
+        previousBalance?: number;
+        depositApplied?: number;
+        paymentMethod?: string | null;
+      }
+    ) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const now = new Date();
+        let target = invoiceMonthFromDate(now); // YYYY-MM
+
+        // If invoice exists for current month, bump to next month
+        const existsRes = await fetchInvoiceByClientMonth(client.id, target);
+        if (existsRes.data) {
+          // increment month
+          const [yStr, mStr] = target.split("-");
+          let y = Number(yStr);
+          let m = Number(mStr) - 1; // 0-based
+          m += 1;
+          if (m > 11) {
+            m = 0;
+            y += 1;
+          }
+          target = `${y}-${String(m + 1).padStart(2, "0")}`;
+        }
+
+        // Compute due date for target month using client's startDate anchor
+        const [ty, tm] = target.split("-").map(Number);
+        const startAnchor = new Date(client.startDate);
+        const anchorDay = startAnchor.getDate();
+        const lastDay = new Date(ty, tm, 0).getDate();
+        const day = Math.min(anchorDay, lastDay);
+        const dueDate = new Date(ty, tm - 1, day);
+        const dueDateISO = formatISODate(dueDate);
+
+        // Determine base price from tier snapshot
+        const tier = tiers.find((t) => t.id === client.tierId);
+        const basePrice = tier?.price ?? 0;
+        const extraDeviceCharge = 0; // MVP: keep 0 unless device logic exists
+
+        const unregisteredOvercharge = input.unregisteredOvercharge ?? 0;
+        const rebate = input.rebate ?? 0;
+        const previousBalance = input.previousBalance ?? 0;
+        const depositApplied = input.depositApplied ?? 0;
+
+        const totalAmount =
+          basePrice +
+          extraDeviceCharge +
+          unregisteredOvercharge -
+          rebate +
+          previousBalance -
+          depositApplied;
+
+        // Generate invoice number (allow override from input); retry once if unique constraint fails
+        const genNumber = () => `INV-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        let invoiceNumber = input.invoiceNumber ?? genNumber();
+
+        const createPayload: InvoiceCreateInput = {
+          clientId: client.id,
+          invoiceNumber,
+          billingMonth: target,
+          invoiceDate: formatISODate(now),
+          dueDate: dueDateISO,
+          basePrice,
+          extraDeviceCharge,
+          unregisteredOvercharge,
+          rebate,
+          previousBalance,
+          depositApplied,
+          totalAmount,
+          paymentStatus: "pending",
+          // snapshot client info
+          // @ts-ignore - extend payload for snapshot
+          client_name: client.name,
+          // @ts-ignore
+          client_room: client.room,
+          // @ts-ignore
+          client_contact: client.contact,
+          // @ts-ignore
+          client_email: client.email,
+          // initialize payment tracking
+          // @ts-ignore
+          amount_paid: 0,
+          // @ts-ignore
+          balance_due: totalAmount,
+        };
+
+        let created = await createInvoiceSvc(createPayload);
+        if (created.error && /unique/i.test(created.error.message)) {
+          // retry once
+          invoiceNumber = genNumber();
+          createPayload.invoiceNumber = invoiceNumber;
+          created = await createInvoiceSvc(createPayload);
+        }
+
+        if (created.error) throw created.error;
+
+        const invoiceRow = created.data as InvoiceRow;
+
+        // Compute next cycle due date (one month after invoice's due_date)
+        const invoiceDue = new Date(invoiceRow.due_date);
+        let ny = invoiceDue.getFullYear();
+        let nm = invoiceDue.getMonth() + 1; // next month index
+        if (nm > 11) {
+          nm = 0;
+          ny += 1;
+        }
+        const nextLastDay = new Date(ny, nm + 1, 0).getDate();
+        const nextDay = Math.min(startAnchor.getDate(), nextLastDay);
+        const nextDue = new Date(ny, nm, nextDay);
+        const nextDueISO = formatISODate(nextDue);
+
+        // Patch client next_due_date
+        await updateClient(client.id, { next_due_date: nextDueISO } as any);
+
+        setLoading(false);
+        return { ok: true as const, invoice: invoiceRow };
+      } catch (err: any) {
+        setError(err?.message ?? String(err));
+        setLoading(false);
+        return { ok: false as const, error: err };
+      }
+    },
+    [tiers]
+  );
+
+  const markAsPaid = useCallback(async (invoiceId: string, method?: string | null, notes?: string | null) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // fetch invoice details
+      const fetched = await import("../services/invoices.service").then(m => m.fetchInvoiceById(invoiceId));
+      const invoice = fetched.data as InvoiceRow;
+      if (!invoice) throw new Error("Invoice not found");
+
+      const now = new Date();
+      const paymentDate = formatISODate(now);
+      const paidAt = now.toISOString();
+
+      // create a payment record for the remaining balance
+      const balance = Number(invoice.balance_due ?? (invoice.total_amount ?? 0));
+      if (balance > 0) {
+        await createPayment({ client_id: invoice.client_id, invoice_id: invoice.id, payment_type: "full", amount: balance, payment_date: paymentDate, payment_method: method ?? null, notes });
+      }
+
+      const res = await patchInvoicePayment(invoice.id, {
+        amount_paid: Number(invoice.amount_paid ?? 0) + balance,
+        balance_due: Math.max(Number(invoice.total_amount ?? 0) - (Number(invoice.amount_paid ?? 0) + balance), 0),
+        payment_status: "paid",
+        payment_date: paymentDate,
+        paid_at: paidAt,
+        payment_method: method ?? null,
+      });
+
+      setLoading(false);
+      if ((res as any).error) throw (res as any).error;
+      return { ok: true as const, invoice: (res as any).data };
+    } catch (err: any) {
+      setError(err?.message ?? String(err));
+      setLoading(false);
+      return { ok: false as const, error: err };
+    }
+  }, []);
+
+  const removeInvoice = useCallback(async (invoiceId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await deleteInvoice(invoiceId);
+      setLoading(false);
+      if ((res as any).error) throw (res as any).error;
+      return { ok: true as const };
+    } catch (err: any) {
+      setError(err?.message ?? String(err));
+      setLoading(false);
+      return { ok: false as const, error: err };
+    }
+  }, []);
+
+  return { loading, error, fetchForClient, createInvoiceForClient, markAsPaid, removeInvoice };
+}
+
+
+// additional helper to list recent invoices
+export async function listRecentInvoices(limit = 50) {
+  const res = await listInvoicesSvc(limit);
+  if (res.error) throw res.error;
+  return res.data ?? [];
+}
