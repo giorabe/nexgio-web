@@ -33,6 +33,9 @@ import StatusBadge from "@/app/components/StatusBadge";
 
 import { Search, Calendar, Eye, Download } from "lucide-react";
 
+// ✅ ADDED: useNavigate for SPA-safe routing (prevents Vercel 404 on deep links)
+import { useNavigate } from "react-router-dom";
+
 interface Payment {
   id: number;
   clientName: string;
@@ -64,6 +67,9 @@ const mockPayments: Payment[] = [];
 export default function InvoiceHistory() {
   const [payments, setPayments] = useState<Payment[]>(mockPayments);
 
+  // ✅ ADDED
+  const navigate = useNavigate();
+
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -72,8 +78,6 @@ export default function InvoiceHistory() {
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Payment | null>(null);
 
-  // (payments/receipts removed from this view — use Receipt History page)
-
   // Invoice Preview Reference
   const invoiceRef = useRef<HTMLDivElement>(null);
 
@@ -81,41 +85,52 @@ export default function InvoiceHistory() {
   const reloadInvoices = async () => {
     try {
       const rows = await listRecentInvoices(100);
-      console.log("[INV-HISTORY] fetched invoices", { count: (rows || []).length, sample: (rows || [])[0] });
-      const mapped: Payment[] = (rows || []).map((r: InvoiceRowWithClient, idx: number) => {
-        const total = Number((r as any).total_amount ?? 0);
-        const paid = (r as any).amount_paid !== null && (r as any).amount_paid !== undefined
-          ? Number((r as any).amount_paid)
-          : Math.max(0, total - Number((r as any).balance_due ?? total));
-        const balance = Number((r as any).balance_due ?? (total - paid));
-
-        return {
-          id: idx + 1,
-          clientName: r.clients?.name ?? (r as any).client_name ?? String(r.client_id ?? "-"),
-          clientRoom: r.clients?.room ?? (r as any).client_room ?? "-",
-          clientContact: r.clients?.contact ?? (r as any).client_contact ?? "-",
-          clientEmail: r.clients?.email ?? (r as any).client_email ?? "-",
-          invoiceNumber: (r as any).invoice_number ?? String((r as any).id ?? ""),
-          invoiceId: String((r as any).invoice_id ?? (r as any).id ?? ""),
-          amount: total,
-          amountPaid: paid,
-          balance: balance,
-          date: (r as any).invoice_date ?? "",
-          dueDate: (r as any).due_date ?? "",
-          method: (r as any).payment_method ?? "",
-          // If balance_due <= 0 prefer 'paid' status regardless of stored payment_status
-          status: (Number((r as any).balance_due ?? 0) <= 0) ? "paid" : (((r as any).payment_status as any) ?? "pending"),
-          details: {
-            basePrice: Number((r as any).base_price ?? 0),
-            extraDeviceCharge: Number((r as any).extra_device_charge ?? 0),
-            unregisteredOvercharge: Number((r as any).unregistered_overcharge ?? 0),
-            rebate: Number((r as any).rebate ?? 0),
-            previousBalance: Number((r as any).previous_balance ?? 0),
-            depositApplied: Number((r as any).deposit_applied ?? 0),
-            total: total,
-          },
-        };
+      console.log("[INV-HISTORY] fetched invoices", {
+        count: (rows || []).length,
+        sample: (rows || [])[0],
       });
+
+      const mapped: Payment[] = (rows || []).map(
+        (r: InvoiceRowWithClient, idx: number) => {
+          const total = Number((r as any).total_amount ?? 0);
+          const paid =
+            (r as any).amount_paid !== null && (r as any).amount_paid !== undefined
+              ? Number((r as any).amount_paid)
+              : Math.max(0, total - Number((r as any).balance_due ?? total));
+          const balance = Number((r as any).balance_due ?? total - paid);
+
+          return {
+            id: idx + 1,
+            clientName:
+              r.clients?.name ?? (r as any).client_name ?? String(r.client_id ?? "-"),
+            clientRoom: r.clients?.room ?? (r as any).client_room ?? "-",
+            clientContact: r.clients?.contact ?? (r as any).client_contact ?? "-",
+            clientEmail: r.clients?.email ?? (r as any).client_email ?? "-",
+            invoiceNumber: (r as any).invoice_number ?? String((r as any).id ?? ""),
+            invoiceId: String((r as any).invoice_id ?? (r as any).id ?? ""),
+            amount: total,
+            amountPaid: paid,
+            balance: balance,
+            date: (r as any).invoice_date ?? "",
+            dueDate: (r as any).due_date ?? "",
+            method: (r as any).payment_method ?? "",
+            status:
+              Number((r as any).balance_due ?? 0) <= 0
+                ? "paid"
+                : (((r as any).payment_status as any) ?? "pending"),
+            details: {
+              basePrice: Number((r as any).base_price ?? 0),
+              extraDeviceCharge: Number((r as any).extra_device_charge ?? 0),
+              unregisteredOvercharge: Number((r as any).unregistered_overcharge ?? 0),
+              rebate: Number((r as any).rebate ?? 0),
+              previousBalance: Number((r as any).previous_balance ?? 0),
+              depositApplied: Number((r as any).deposit_applied ?? 0),
+              total: total,
+            },
+          };
+        }
+      );
+
       setPayments(mapped);
     } catch (e) {
       console.error("Failed to reload invoices", e);
@@ -128,6 +143,7 @@ export default function InvoiceHistory() {
       if (!mounted) return;
       await reloadInvoices();
     })();
+
     const onUpdated = () => void reloadInvoices();
     window.addEventListener("invoices:updated", onUpdated as any);
 
@@ -170,7 +186,6 @@ export default function InvoiceHistory() {
         alert("Failed to delete invoice");
         return;
       }
-      // Payments should be removed by DB cascade (ON DELETE CASCADE). Do not perform manual deletion here.
       setViewOpen(false);
       setSelectedInvoice(null);
       await reloadInvoices();
@@ -187,12 +202,10 @@ export default function InvoiceHistory() {
   };
 
   const openPaymentHistory = async (invoiceId?: string) => {
-    // payment history removed from this page — open Receipt History instead
     if (!invoiceId) return;
+    // (kept as-is)
     window.location.href = `/dashboard/receipts`;
   };
-
-  
 
   // ✅ FIXED PNG Export (portrait, no half-cut)
   const handleSaveImage = async () => {
@@ -201,13 +214,12 @@ export default function InvoiceHistory() {
     try {
       const html2canvas = (await import("html2canvas")).default;
 
-      // clone the invoice preview only (not the dialog)
       const clone = invoiceRef.current.cloneNode(true) as HTMLElement;
 
       clone.style.position = "fixed";
       clone.style.left = "-99999px";
       clone.style.top = "0";
-      clone.style.width = "720px"; // portrait-friendly width that fits dialogs better
+      clone.style.width = "720px";
       clone.style.maxWidth = "720px";
       clone.style.background = "#ffffff";
       clone.style.padding = "0";
@@ -243,13 +255,16 @@ export default function InvoiceHistory() {
     return matchesSearch && matchesStatus;
   });
 
-  // Total Paid should include partial payments (use invoice.amount_paid from DB)
   const totalPaid = filteredPayments.reduce((sum, p) => sum + Number(p.amountPaid ?? 0), 0);
   const totalPaidCount = filteredPayments.filter((p) => Number(p.amountPaid ?? 0) > 0).length;
 
-  // Keep pending/overdue as previous behavior (they rely on status and/or amount)
-  const totalPending = payments.filter((p) => p.status === "pending").reduce((sum, p) => sum + p.amount, 0);
-  const totalOverdue = payments.filter((p) => p.status === "overdue").reduce((sum, p) => sum + p.amount, 0);
+  const totalPending = payments
+    .filter((p) => p.status === "pending")
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const totalOverdue = payments
+    .filter((p) => p.status === "overdue")
+    .reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -263,12 +278,16 @@ export default function InvoiceHistory() {
         <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-6">
           <p className="text-[#A0A0A0] text-sm mb-2">Pending</p>
           <p className="text-3xl font-bold text-[#FF9F43]">₱{totalPending.toLocaleString()}</p>
-          <p className="text-[#A0A0A0] text-sm mt-2">{payments.filter((p) => p.status === "pending").length} transactions</p>
+          <p className="text-[#A0A0A0] text-sm mt-2">
+            {payments.filter((p) => p.status === "pending").length} transactions
+          </p>
         </div>
         <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-6">
           <p className="text-[#A0A0A0] text-sm mb-2">Overdue</p>
           <p className="text-3xl font-bold text-[#EA5455]">₱{totalOverdue.toLocaleString()}</p>
-          <p className="text-[#A0A0A0] text-sm mt-2">{payments.filter((p) => p.status === "overdue").length} transactions</p>
+          <p className="text-[#A0A0A0] text-sm mt-2">
+            {payments.filter((p) => p.status === "overdue").length} transactions
+          </p>
         </div>
       </div>
 
@@ -298,8 +317,6 @@ export default function InvoiceHistory() {
             <SelectItem value="overdue">Overdue</SelectItem>
           </SelectContent>
         </Select>
-
-        {/* Method filter removed (moved to receipts) */}
       </div>
 
       {/* Payment Table */}
@@ -313,8 +330,6 @@ export default function InvoiceHistory() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Amount</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Paid</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Balance</th>
-
-                {/* ✅ CHANGED: Payment Date -> Due Date */}
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0] min-w-[160px]">Due Date</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Status</th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-[#A0A0A0]">Action</th>
@@ -332,7 +347,6 @@ export default function InvoiceHistory() {
                   <td className="px-6 py-4 text-white font-semibold">₱{payment.amountPaid.toLocaleString()}</td>
                   <td className="px-6 py-4 text-white font-semibold">₱{payment.balance.toLocaleString()}</td>
 
-                  {/* ✅ Due Date display */}
                   <td className="px-6 py-4 text-[#A0A0A0] whitespace-nowrap min-w-[160px]">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
@@ -352,19 +366,16 @@ export default function InvoiceHistory() {
                         <Eye className="w-4 h-4 mr-2" />
                         View Invoice
                       </Button>
-
-                      
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-
           </table>
         </div>
       </div>
 
-      {/* ✅ FIXED VIEW INVOICE DIALOG: portrait + responsive */}
+      {/* VIEW INVOICE DIALOG */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
         <DialogContent
           className="
@@ -380,22 +391,13 @@ export default function InvoiceHistory() {
             </DialogTitle>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const invId = String(selectedInvoice?.invoiceId ?? "");
-                  if (invId) window.location.href = `/dashboard/invoice?invoice=${invId}`;
-                }}
-                className="border-[#2A2A2A] text-white"
-              >
-                Edit
-              </Button>
 
               <Button
                 variant="outline"
                 onClick={() => {
                   const invId = String(selectedInvoice?.invoiceId ?? "");
-                  if (invId) window.location.href = `/dashboard/payments-entry?invoice=${invId}`;
+                  // ✅ CHANGED: SPA navigation (no reload, no Vercel 404)
+                  if (invId) navigate(`/dashboard/payments-entry?invoice=${invId}`);
                 }}
                 className="border-[#2A2A2A] text-white"
               >
@@ -408,7 +410,6 @@ export default function InvoiceHistory() {
           <div className="overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>
             {selectedInvoice && (
               <div className="space-y-4">
-                {/* Shared InvoiceTemplate preview, fixed portrait size, scrollable if needed */}
                 <div className="flex justify-center">
                   <div
                     ref={invoiceRef}
@@ -467,8 +468,6 @@ export default function InvoiceHistory() {
           Total: ₱{filteredPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
         </p>
       </div>
-
-      {/* Payment History removed — use Receipt History page */}
     </div>
   );
 }
