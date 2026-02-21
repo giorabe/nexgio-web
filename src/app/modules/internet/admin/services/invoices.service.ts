@@ -1,5 +1,6 @@
 import { supabase } from "@/app/shared/supabaseClient";
 import type { InvoiceRow, InvoiceCreateInput, InvoiceStatus, InvoiceRowWithClient } from "../types/invoice.types";
+import { updateClient } from "./clients.service";
 
 const SELECT_FIELDS = `id,client_id,client_name,client_room,client_contact,client_email,invoice_number,billing_month,invoice_date,due_date,base_price,extra_device_charge,unregistered_overcharge,rebate,previous_balance,deposit_applied,total_amount,amount_paid,balance_due,payment_status,payment_date,paid_at,payment_method,created_at,updated_at`;
 
@@ -107,9 +108,16 @@ export async function createInvoice(input: InvoiceCreateInput) {
 }
 
 export async function updateInvoice(invoiceId: string, patch: Partial<InvoiceRow>) {
+  // Map UI camelCase fields to DB snake_case where necessary
+  const dbPatch: Record<string, unknown> = { ...(patch as Record<string, unknown>) };
+  if ((patch as any).dueDate !== undefined) {
+    dbPatch.due_date = (patch as any).dueDate;
+    delete dbPatch.dueDate;
+  }
+
   return supabase
     .from("invoices")
-    .update(patch as Record<string, unknown>)
+    .update(dbPatch)
     .eq("id", invoiceId)
     .select(SELECT_FIELDS)
     .single()
@@ -117,7 +125,56 @@ export async function updateInvoice(invoiceId: string, patch: Partial<InvoiceRow
 }
 
 export async function deleteInvoice(invoiceId: string) {
-  return supabase.from("invoices").delete().eq("id", invoiceId);
+  try {
+    // attempt to fetch the invoice first to get client id
+    const { data: invoiceRow, error: fetchErr } = await supabase
+      .from("invoices")
+      .select("id,client_id,due_date")
+      .eq("id", invoiceId)
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchErr) {
+      console.error("deleteInvoice: failed to fetch invoice before delete", fetchErr);
+    }
+
+    // perform delete
+    const delRes = await supabase.from("invoices").delete().eq("id", invoiceId).select(SELECT_FIELDS).single();
+
+    // If we have a client id, compute the latest remaining invoice due_date and update client's next_due_date
+    const clientId = invoiceRow?.client_id ?? (delRes.data as any)?.client_id;
+    if (clientId) {
+      try {
+        const { data: latest, error: latestErr } = await supabase
+          .from("invoices")
+          .select("due_date")
+          .eq("client_id", clientId)
+          .order("due_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestErr) {
+          console.error("deleteInvoice: failed to fetch latest invoice for client", latestErr);
+        }
+
+        const nextDue = latest?.due_date ?? null;
+        // update client next_due_date (set to null if none remain)
+        try {
+          await updateClient(clientId, { next_due_date: nextDue } as any);
+        } catch (e) {
+          console.error("deleteInvoice: failed to update client next_due_date", e);
+        }
+      } catch (e) {
+        console.error("deleteInvoice: error while updating client next_due_date", e);
+      }
+    }
+
+    return delRes;
+  } catch (err) {
+    console.error("deleteInvoice unexpected error", err);
+    // fall back to simple delete attempt
+    return supabase.from("invoices").delete().eq("id", invoiceId);
+  }
 }
 
 export async function updateInvoiceStatus(

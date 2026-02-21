@@ -83,6 +83,8 @@ export function useInvoices() {
         previousBalance?: number;
         depositApplied?: number;
         paymentMethod?: string | null;
+        // optional override: use caller-provided ISO due date instead of computing
+        dueDate?: string;
       }
     ) => {
       setLoading(true);
@@ -94,7 +96,12 @@ export function useInvoices() {
 
         // Prefer latest invoice as authoritative base if exists: advance billing_month and due_date by 1 month
         const latestRes = await fetchLatestInvoiceByClient(client.id);
-        if (latestRes && latestRes.data) {
+        let dueDateISO: string;
+
+        // If caller provided explicit dueDate override (ISO), use it
+        if (input.dueDate) {
+          dueDateISO = input.dueDate;
+        } else if (latestRes && latestRes.data) {
           const latest: any = latestRes.data;
           // latest.billing_month expected format YYYY-MM
           const [lyStr, lmStr] = String(latest.billing_month).split("-");
@@ -115,7 +122,7 @@ export function useInvoices() {
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
           };
 
-          var dueDateISO = latest.due_date ? addMonths(latest.due_date, 1) : formatISODate(new Date());
+          dueDateISO = latest.due_date ? addMonths(latest.due_date, 1) : formatISODate(new Date());
         } else {
           // Compute due date for target month using client's startDate anchor
           const [ty, tm] = target.split("-").map(Number);
@@ -124,7 +131,7 @@ export function useInvoices() {
           const lastDay = new Date(ty, tm, 0).getDate();
           const day = Math.min(anchorDay, lastDay);
           const dueDate = new Date(ty, tm - 1, day);
-          var dueDateISO = formatISODate(dueDate);
+          dueDateISO = formatISODate(dueDate);
         }
 
         // Determine base price + device limit (authoritative)
@@ -185,6 +192,7 @@ export function useInvoices() {
           invoiceNumber,
           billingMonth: target,
           invoiceDate: formatISODate(now),
+          // persist dueDate chosen/provided by caller or derived above
           dueDate: dueDateISO,
           basePrice,
           extraDeviceCharge,

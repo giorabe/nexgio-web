@@ -38,9 +38,55 @@ export default function Invoice() {
   const [selectedClientId, setSelectedClientId] = useState<string>("");
 
   const [invoiceDate] = useState(new Date().toISOString().split("T")[0]);
-  const [dueDate, setDueDate] = useState(
-    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-  );
+  // Single source of truth for due date (ISO YYYY-MM-DD)
+  const [dueDateISO, setDueDateISO] = useState<string>("");
+
+  // Helpers for date handling
+  function isValidISODate(s: string): boolean {
+    if (!s || typeof s !== "string") return false;
+    // basic YYYY-MM-DD pattern
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s);
+    return !Number.isNaN(d.getTime());
+  }
+
+  function normalizeDateToISO(input: string | Date): string {
+    if (!input && input !== "") return "";
+    if (input instanceof Date) {
+      return input.toISOString().split("T")[0];
+    }
+    const s = String(input).trim();
+    if (isValidISODate(s)) return s;
+
+    // Accept MM/DD/YYYY or MM-DD-YY(YY) formats
+    const m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+    if (m) {
+      let mm = Number(m[1]);
+      let dd = Number(m[2]);
+      let yy = m[3];
+      let yyyy = Number(yy);
+      if (yy.length === 2) {
+        yyyy = 2000 + yyyy;
+      }
+      const mmS = String(Math.max(1, Math.min(12, mm))).padStart(2, "0");
+      const ddS = String(Math.max(1, Math.min(31, dd))).padStart(2, "0");
+      return `${yyyy}-${mmS}-${ddS}`;
+    }
+
+    const parsed = new Date(s);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().split("T")[0];
+    return "";
+  }
+
+  function formatISOToMMDDYY(iso: string) {
+    if (!iso) return "";
+    return formatMMDDYY(iso);
+  }
+
+  // Required helper per specification: display-only formatter
+  function formatMMDDYYFromISO(iso: string) {
+    return formatISOToMMDDYY(iso);
+  }
 
   const [unregisteredOverchargeInput, setUnregisteredOverchargeInput] = useState<string>("0");
   const [rebateInput, setRebateInput] = useState<string>("0");
@@ -63,7 +109,13 @@ export default function Invoice() {
 
   useEffect(() => {
     if (!selectedClient) return;
-    setDueDate(selectedClient.dueDate);
+    // Prefer explicit nextDueDate field, otherwise DB field next_due_date, otherwise legacy dueDate
+    // Normalize to ISO YYYY-MM-DD and store in dueDateISO state (single source of truth)
+    const raw = (selectedClient as any).nextDueDate ?? (selectedClient as any).next_due_date ?? (selectedClient as any).dueDate ?? "";
+    const iso = normalizeDateToISO(raw ?? "") || "";
+    // IMPORTANT: Do NOT auto-calculate a fallback due date. If client has no next due date, leave blank and require user action.
+    if (iso) setDueDateISO(iso);
+    else setDueDateISO("");
     setOverridePreviousBalanceInput(null);
 
     // reset auto previous balance while we fetch
@@ -172,15 +224,24 @@ export default function Invoice() {
   const handleSave = async () => {
     if (!selectedClient) return;
     if (saving) return;
+    // Require a valid due date coming from the client's next due date
+    if (!isValidISODate(dueDateISO)) {
+      setMessage("Cannot save invoice: client has no Next Due Date.");
+      return;
+    }
     setMessage(null);
     setSaving(true);
     const invoiceNum = invoiceNumber || generateInvoiceNumber();
     try {
+      // log due date and payload for verification
+      console.log("Creating invoice payload dueDateISO:", dueDateISO);
       const res = await createInvoiceForClient(selectedClient, {
         invoiceNumber: invoiceNum,
         unregisteredOvercharge,
         // store percent (0-100)
         rebate: rebatePercent,
+        // UI/service contract uses camelCase `dueDate`
+        dueDate: dueDateISO,
         previousBalance,
         depositApplied,
         paymentMethod: null,
@@ -188,8 +249,7 @@ export default function Invoice() {
 
       if (res.ok) {
         // show toast success
-        toast.success("Success", {
-          description: "Invoice created successfully.",
+        toast.success("Invoice created successfully.", {
           duration: 3000,
           position: "top-right",
         });
@@ -208,6 +268,10 @@ export default function Invoice() {
         // Refresh clients and save created invoice
         void reloadClients();
         setSavedInvoice(res.invoice ?? null);
+        // ensure UI shows the exact DB value for due_date/dueDate returned by service
+        const returnedDue = res.invoice?.due_date ?? res.invoice?.due_date ?? "";
+        const returnedIso = normalizeDateToISO(returnedDue ?? "");
+        if (returnedIso) setDueDateISO(returnedIso);
         setInvoiceNumber("");
       } else {
         setMessage(`Failed: ${res.error?.message ?? "unknown"}`);
@@ -222,7 +286,7 @@ export default function Invoice() {
     setEditPatch({
       invoice_number: savedInvoice.invoice_number,
       invoice_date: savedInvoice.invoice_date,
-      due_date: savedInvoice.due_date,
+      dueDate: savedInvoice.due_date ?? (savedInvoice as any).dueDate ?? "",
       base_price: savedInvoice.base_price,
       extra_device_charge: savedInvoice.extra_device_charge,
       unregistered_overcharge: savedInvoice.unregistered_overcharge,
@@ -284,7 +348,7 @@ export default function Invoice() {
       invoiceNumber: invoiceNumber || savedInvoice?.invoice_number || "",
       billingMonth: savedInvoice?.billing_month ?? new Date().toISOString().slice(0, 7),
       invoiceDate,
-      dueDate,
+      dueDate: dueDateISO,
       basePrice,
       extraDeviceCharge,
       unregisteredOvercharge,
@@ -407,8 +471,11 @@ export default function Invoice() {
                 <div className="space-y-2">
                   <Label className="text-white">Due Date</Label>
                     <div>
-                      <Input type="date" value={dueDate} readOnly className="hidden" />
-                      <p className="text-white font-medium">{formatMMDDYY(dueDate)}</p>
+                      <Input type="date" value={dueDateISO} readOnly className="hidden" />
+                      <p className="text-white font-medium">{dueDateISO ? formatMMDDYYFromISO(dueDateISO) : "--"}</p>
+                      {(!dueDateISO || !isValidISODate(dueDateISO)) && (
+                        <p className="text-sm text-rose-400">Client has no Next Due Date; cannot save invoice.</p>
+                      )}
                     </div>
                   </div>
               </div>
@@ -423,7 +490,7 @@ export default function Invoice() {
             <Button
               onClick={handleSave}
               className="flex-1 bg-[#F5C400] text-black hover:opacity-90"
-              disabled={!selectedClient || creating || saving}
+              disabled={!selectedClient || creating || saving || !isValidISODate(dueDateISO)}
               type="button"
             >
               Save Invoice
@@ -535,7 +602,7 @@ export default function Invoice() {
               </div>
               <div>
                 <Label className="text-white">Due Date</Label>
-                <Input type="date" value={editPatch.due_date ?? ""} onChange={(e) => setEditPatch((s:any)=>({...s, due_date: e.target.value}))} />
+                <Input type="date" value={editPatch.dueDate ?? ""} onChange={(e) => setEditPatch((s:any)=>({...s, dueDate: e.target.value}))} />
               </div>
             </div>
 
