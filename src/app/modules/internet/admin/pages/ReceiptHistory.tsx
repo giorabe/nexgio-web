@@ -92,7 +92,7 @@ export default function ReceiptHistory() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Invoice</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Type</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Amount</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Date</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0] whitespace-nowrap min-w-[120px]">Date</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Method</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">Action</th>
               </tr>
@@ -107,7 +107,7 @@ export default function ReceiptHistory() {
                   </td>
                   <td className="px-6 py-4 text-white">{r.payment_type}</td>
                   <td className="px-6 py-4 text-white">₱{Number(r.amount).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-[#A0A0A0]">
+                  <td className="px-6 py-4 text-[#A0A0A0] whitespace-nowrap min-w-[120px]">
                     {r.payment_date ? formatDateMMDDYY(r.payment_date) : "-"}
                   </td>
                   <td className="px-6 py-4 text-[#A0A0A0]">{r.payment_method ?? "-"}</td>

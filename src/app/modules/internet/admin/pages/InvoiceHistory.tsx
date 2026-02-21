@@ -383,6 +383,7 @@ export default function InvoiceHistory() {
             w-[95vw] max-w-[980px]
             max-h-[92vh]
             overflow-hidden
+            flex flex-col
           "
         >
           <DialogHeader className="flex items-center justify-between">
@@ -407,7 +408,7 @@ export default function InvoiceHistory() {
           </DialogHeader>
 
           {/* Body scroll ONLY */}
-          <div className="overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>
+          <div className="flex-1 overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>
             {selectedInvoice && (
               <div className="space-y-4">
                 <div className="flex justify-center">
@@ -435,26 +436,26 @@ export default function InvoiceHistory() {
                     />
                   </div>
                 </div>
-
-                <Button
-                  onClick={handleSaveImage}
-                  className="w-full border-[#2A2A2A] text-white hover:bg-[#2A2A2A]"
-                  variant="outline"
-                  type="button"
-                >
-                  <Download className="w-4 h-4 mr-2" /> Download as Image (PNG)
-                </Button>
               </div>
             )}
           </div>
 
           <DialogFooter>
+            <div className="flex gap-2 flex w-full flex-col gap-2 sm:flex-row sm:justify-end justify-center">
+               <Button
+                  onClick={handleSaveImage}
+                  className="w-auto border-[#10B981] text-white bg-[#10B981]"
+                  variant="outline"
+                >
+                  <Download/> Save as Image
+                </Button>
             <Button variant="destructive" onClick={handleDeleteInvoice}>
               Delete Invoice
             </Button>
-            <Button variant="outline" onClick={() => setViewOpen(false)}>
+            <Button variant="outline" onClick={() => setViewOpen(false)} className="w-full sm:w-auto">
               Close
             </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -51,6 +51,7 @@ export function useClients() {
 
   const clients: ClientUI[] = useMemo(() => {
     const tierNameById = new Map(tiers.map((t) => [t.id, t.name]));
+
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -62,15 +63,19 @@ export function useClients() {
       contact: r.contact ?? "",
       email: r.email ?? "",
       startDate: r.start_date,
-        // Prefer explicit next_due_date from DB (ISO YYYY-MM-DD), fallback to computed MM/DD/YYYY
-        nextDueDate: r.next_due_date ?? "",
-        dueDate: r.next_due_date ? (() => {
-          const d = new Date(r.next_due_date as string);
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const dd = String(d.getDate()).padStart(2, "0");
-          const yyyy = d.getFullYear();
-          return `${mm}/${dd}/${yyyy}`;
-        })() : calcNextDueDate(r.start_date),
+
+      nextDueDate: r.next_due_date ?? "",
+
+      dueDate: r.next_due_date
+        ? (() => {
+            const d = new Date(r.next_due_date as string);
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            const yyyy = d.getFullYear();
+            return `${mm}/${dd}/${yyyy}`;
+          })()
+        : calcNextDueDate(r.start_date),
+
       hasDeposit: r.deposit_enabled,
       depositAmount: r.deposit_amount ?? 0,
       account: {
@@ -101,20 +106,30 @@ export function useClients() {
     void reload();
   }, [reload]);
 
+  // 🔥 FIX IS HERE
   const add = useCallback(async (input: {
     name: string;
     room: string;
-    tierId: string; // uuid
+    tierId: string;
     devices: number;
     contact: string;
     email: string;
     startDate: string;
+    nextDueDate: string;
     hasDeposit: boolean;
     depositAmount: number;
     username: string;
     password: string;
   }) => {
     setError(null);
+
+    // convert MM/DD/YYYY → YYYY-MM-DD for DB
+    let nextDueISO: string | null = null;
+
+    if (input.nextDueDate) {
+      const [mm, dd, yyyy] = input.nextDueDate.split("/");
+      nextDueISO = `${yyyy}-${mm}-${dd}`;
+    }
 
     const { data, error: err } = await createClient({
       name: input.name.trim(),
@@ -125,6 +140,10 @@ export function useClients() {
       contact: input.contact,
       email: input.email,
       start_date: input.startDate,
+
+      // ✅ SAVE IT HERE
+      next_due_date: nextDueISO,
+
       deposit_enabled: input.hasDeposit,
       deposit_amount: input.depositAmount,
       account_username: input.username.trim(),
@@ -140,20 +159,7 @@ export function useClients() {
     return { ok: true as const };
   }, []);
 
-  const edit = useCallback(async (id: string, patch: {
-    name?: string;
-    room?: string;
-    tierId?: string;
-    devices?: number;
-    status?: "active" | "late" | "suspended";
-    contact?: string;
-    email?: string;
-    startDate?: string;
-    hasDeposit?: boolean;
-    depositAmount?: number;
-    username?: string;
-    password?: string;
-  }) => {
+  const edit = useCallback(async (id: string, patch: any) => {
     setError(null);
 
     const dbPatch: ClientRowPatch = {};
@@ -166,7 +172,6 @@ export function useClients() {
     if (patch.contact !== undefined) dbPatch.contact = patch.contact.trim() || null;
     if (patch.email !== undefined) dbPatch.email = patch.email.trim() || null;
     if (patch.startDate !== undefined) dbPatch.start_date = patch.startDate;
-
     if (patch.hasDeposit !== undefined) dbPatch.deposit_enabled = patch.hasDeposit;
     if (patch.depositAmount !== undefined) dbPatch.deposit_amount = patch.depositAmount;
 
@@ -182,8 +187,9 @@ export function useClients() {
     }
 
     if (data) {
-    setRows((prev) => prev.map((r) => (r.id === id ? data : r)));
+      setRows((prev) => prev.map((r) => (r.id === id ? data : r)));
     }
+
     return { ok: true as const };
   }, []);
 

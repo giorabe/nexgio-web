@@ -214,6 +214,7 @@ export default function ClientList() {
       contact: newClient.contact.trim(),
       email: newClient.email.trim(),
       startDate: newClient.startDate,
+      nextDueDate: calcNextDueDate(newClient.startDate),
       hasDeposit: newClient.hasDeposit,
       depositAmount: newClient.hasDeposit ? Number(newClient.depositAmount) || 0 : 0,
       username: newAccount.username.trim(),

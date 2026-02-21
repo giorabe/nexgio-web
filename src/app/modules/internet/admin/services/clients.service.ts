@@ -23,7 +23,8 @@ export async function createClient(input: {
   status: "active" | "late" | "suspended";
   contact: string;
   email: string;
-  start_date: string; // YYYY-MM-DD
+  start_date: string;
+  next_due_date: string | null; 
   deposit_enabled: boolean;
   deposit_amount: number;
   account_username: string;
