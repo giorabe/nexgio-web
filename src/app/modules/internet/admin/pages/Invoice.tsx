@@ -27,6 +27,7 @@ import type { InvoiceUI, InvoiceRow } from "@/app/modules/internet/admin/types/i
 import { computeClientPreviousBalance } from "@/app/modules/internet/admin/services/invoices.service";
 import { updateInvoice } from "@/app/modules/internet/admin/services/invoices.service";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/app/shared/ui/dialog";
+import { toast } from "sonner";
 
 export default function Invoice() {
   const { clients, reload: reloadClients } = useClients();
@@ -53,6 +54,7 @@ export default function Invoice() {
   const [message, setMessage] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editPatch, setEditPatch] = useState<any>({});
+  const [saving, setSaving] = useState(false);
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId) ?? null,
@@ -151,36 +153,48 @@ export default function Invoice() {
 
   const handleSave = async () => {
     if (!selectedClient) return;
+    if (saving) return;
     setMessage(null);
+    setSaving(true);
     const invoiceNum = invoiceNumber || generateInvoiceNumber();
-    const res = await createInvoiceForClient(selectedClient, {
-      invoiceNumber: invoiceNum,
-      unregisteredOvercharge,
-      rebate,
-      previousBalance,
-      depositApplied,
-      paymentMethod: null,
-    });
+    try {
+      const res = await createInvoiceForClient(selectedClient, {
+        invoiceNumber: invoiceNum,
+        unregisteredOvercharge,
+        rebate,
+        previousBalance,
+        depositApplied,
+        paymentMethod: null,
+      });
 
-    if (res.ok) {
-      setMessage("Invoice created successfully");
-      // Deduct deposit from client if applied
-      if (depositApplied > 0) {
-        try {
-          const oldDeposit = Number(selectedClient.depositAmount ?? 0);
-          const newDeposit = Math.max(oldDeposit - depositApplied, 0);
-          await updateClient(selectedClient.id, { deposit_amount: newDeposit } as any);
-        } catch (e) {
-          console.error("Failed to update client deposit:", e);
+      if (res.ok) {
+        // show toast success
+        toast.success("Success", {
+          description: "Invoice created successfully.",
+          duration: 3000,
+          position: "top-right",
+        });
+
+        // Deduct deposit from client if applied
+        if (depositApplied > 0) {
+          try {
+            const oldDeposit = Number(selectedClient.depositAmount ?? 0);
+            const newDeposit = Math.max(oldDeposit - depositApplied, 0);
+            await updateClient(selectedClient.id, { deposit_amount: newDeposit } as any);
+          } catch (e) {
+            console.error("Failed to update client deposit:", e);
+          }
         }
-      }
 
-      // Refresh clients and save created invoice
-      void reloadClients();
-      setSavedInvoice(res.invoice ?? null);
-      setInvoiceNumber("");
-    } else {
-      setMessage(`Failed: ${res.error?.message ?? "unknown"}`);
+        // Refresh clients and save created invoice
+        void reloadClients();
+        setSavedInvoice(res.invoice ?? null);
+        setInvoiceNumber("");
+      } else {
+        setMessage(`Failed: ${res.error?.message ?? "unknown"}`);
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -384,7 +398,7 @@ export default function Invoice() {
             <Button
               onClick={handleSave}
               className="flex-1 bg-[#F5C400] text-black hover:opacity-90"
-              disabled={!selectedClient || creating}
+              disabled={!selectedClient || creating || saving}
               type="button"
             >
               Save Invoice
@@ -467,6 +481,7 @@ export default function Invoice() {
         </div>
       </div>
       {/* Edit Invoice Dialog */}
+      {/* (success toast used instead of dialog) */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="bg-[#1E1E1E] border-[#2A2A2A] text-white max-w-2xl">
           <DialogHeader>

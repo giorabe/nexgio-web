@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router";
+import { Toaster } from "@/app/shared/ui/sonner";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
@@ -19,6 +20,7 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen bg-[#0F0F0F]">
+      <Toaster position="top-right" />
       {/* Sidebar - Desktop */}
       <div className="hidden md:block">
         <Sidebar />
