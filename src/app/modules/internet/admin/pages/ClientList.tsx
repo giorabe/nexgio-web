@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/app/shared/ui/dialog";
 
 import {
@@ -26,6 +27,7 @@ import StatusBadge from "@/app/components/StatusBadge";
 import { formatDateMMDDYY } from "@/app/utils/formatDate";
 
 import { Plus, Search, Eye } from "lucide-react";
+import SuccessDialog from "@/app/shared/components/SuccessDialog";
 
 interface ClientAccount {
   username: string;
@@ -44,7 +46,8 @@ interface Client {
   contact: string;
   email: string;
   startDate: string; // YYYY-MM-DD
-  dueDate: string; // MM/DD/YYYY (display)
+  dueDate: string; // YYYY-MM-DD (ISO)
+  nextDueDate: string; // YYYY-MM-DD (ISO)
 
   hasDeposit: boolean;
   depositAmount: number;
@@ -52,45 +55,7 @@ interface Client {
   account?: ClientAccount;
 }
 
-function calcNextDueDate(startDateISO: string, now = new Date()) {
-  const start = new Date(startDateISO);
-  if (Number.isNaN(start.getTime())) return "";
-
-  // Build an "anchor" date with the same day-of-month as start
-  const day = start.getDate();
-
-  // Start from current month/year
-  let y = now.getFullYear();
-  let m = now.getMonth(); // 0-11
-
-  // helper: last day in a month
-  const lastDayOfMonth = (year: number, monthIndex: number) =>
-    new Date(year, monthIndex + 1, 0).getDate();
-
-  // candidate due date in current month
-  const candidateDay = Math.min(day, lastDayOfMonth(y, m));
-  let due = new Date(y, m, candidateDay);
-
-  // If already past today (or earlier today), move to next month
-  // (We compare date-only by zeroing time)
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dueDateOnly = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-
-  if (dueDateOnly <= today) {
-    m += 1;
-    if (m > 11) {
-      m = 0;
-      y += 1;
-    }
-    const nextDay = Math.min(day, lastDayOfMonth(y, m));
-    due = new Date(y, m, nextDay);
-  }
-
-  const mm = String(due.getMonth() + 1).padStart(2, "0");
-  const dd = String(due.getDate()).padStart(2, "0");
-  const yyyy = due.getFullYear();
-  return `${mm}/${dd}/${yyyy}`;
-}
+// NOTE: Removed auto-calculation of due date. `nextDueDate` is editable and authoritative.
 
 export default function ClientList() {
   const { clients, loading, error, add, edit, remove, tiers } = useClients();
@@ -109,6 +74,7 @@ export default function ClientList() {
     contact: "",
     email: "",
     startDate: "",
+    nextDueDate: "",
     hasDeposit: false,
     depositAmount: 0,
   });
@@ -122,6 +88,9 @@ export default function ClientList() {
   // View Details dialog
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Edit inside View Details
   const [isEditing, setIsEditing] = useState(false);
@@ -131,10 +100,7 @@ export default function ClientList() {
   const [showPassword, setShowPassword] = useState(false);
   const [editDevicesText, setEditDevicesText] = useState<string>("");
 
-  const computedDueDate = useMemo(
-    () => calcNextDueDate(newClient.startDate),
-    [newClient.startDate]
-  );
+
 
   const filteredClients = useMemo(() => {
     return clients.filter((client) => {
@@ -161,6 +127,7 @@ export default function ClientList() {
       contact: "",
       email: "",
       startDate: "",
+      nextDueDate: "",
       hasDeposit: false,
       depositAmount: 0,
     });
@@ -193,6 +160,7 @@ export default function ClientList() {
     newClient.tierId.trim() !== "" &&
     newClient.devices.trim() !== "" &&
     newClient.startDate.trim() !== "" &&
+    newClient.nextDueDate.trim() !== "" &&
     (!newClient.hasDeposit || newClient.depositAmount > 0);
 
   const canSaveAccount =
@@ -214,7 +182,7 @@ export default function ClientList() {
       contact: newClient.contact.trim(),
       email: newClient.email.trim(),
       startDate: newClient.startDate,
-      nextDueDate: calcNextDueDate(newClient.startDate),
+      nextDueDate: newClient.nextDueDate,
       hasDeposit: newClient.hasDeposit,
       depositAmount: newClient.hasDeposit ? Number(newClient.depositAmount) || 0 : 0,
       username: newAccount.username.trim(),
@@ -251,6 +219,7 @@ export default function ClientList() {
       contact: editDraft.contact,
       email: editDraft.email,
       startDate: editDraft.startDate,
+      nextDueDate: editDraft.nextDueDate,
       hasDeposit: editDraft.hasDeposit,
       depositAmount: editDraft.hasDeposit ? Number(editDraft.depositAmount) || 0 : 0,
       username: editDraft.account?.username || "",
@@ -269,7 +238,9 @@ export default function ClientList() {
     if (!selectedClient) return;
     const res = await remove(selectedClient.id);
     if (res.ok) {
-      closeDetails();
+      setConfirmOpen(false);
+      setSuccessMessage("Client deleted successfully.");
+      setSuccessOpen(true);
     }
   };
 
@@ -437,14 +408,16 @@ export default function ClientList() {
 
                   <div className="space-y-2">
                     <Label htmlFor="dueDate" className="text-white">
-                      Due Date (Auto)
+                      Due Date
                     </Label>
                     <Input
                       id="dueDate"
-                      type="text"
-                      value={computedDueDate}
-                      readOnly
-                      className="bg-[#161616] border-[#2A2A2A] text-white opacity-80"
+                      type="date"
+                      value={newClient.nextDueDate}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setNewClient((p) => ({ ...p, nextDueDate: e.target.value }))
+                      }
+                      className="bg-[#161616] border-[#2A2A2A] text-white"
                     />
                   </div>
                 </div>
@@ -644,7 +617,7 @@ export default function ClientList() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">
                   Devices
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0] min-w-[120px] whitespace-nowrap">
                   Due Date
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">
@@ -675,7 +648,7 @@ export default function ClientList() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-white">{client.devices}</td>
-                  <td className="px-6 py-4 text-white">{formatDateMMDDYY(client.dueDate)}</td>
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-white">{formatDateMMDDYY(client.dueDate)}</td>
                   <td className="px-6 py-4">
                     <StatusBadge status={client.status} />
                   </td>
@@ -823,7 +796,7 @@ export default function ClientList() {
                       type="button"
                       variant="outline"
                       className="flex-1 border-[#2A2A2A] text-[#EA5455] hover:bg-[#EA5455]/10"
-                      onClick={deleteClient}
+                      onClick={() => setConfirmOpen(true)}
                     >
                       Delete
                     </Button>
@@ -837,6 +810,48 @@ export default function ClientList() {
                   </div>
                 </div>
               )}
+
+              <Dialog open={confirmOpen} onOpenChange={(o) => !o && setConfirmOpen(false)}>
+                <DialogContent className="bg-[#1E1E1E] border-[#2A2A2A] text-white max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Confirm Delete</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="py-2 text-[#A0A0A0]">Are you sure you want to delete this Client? This action cannot be undone.</div>
+
+                  <DialogFooter className="w-full">
+                      <div className="flex flex-col sm:flex-row justify-center gap-3 w-full">
+                        <Button
+                          variant="outline"
+                          onClick={() => setConfirmOpen(false)}
+                          className="w-full sm:w-auto border-[#2A2A2A] text-white"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={async () => await deleteClient()}
+                          variant="destructive"
+                          className="w-full sm:w-auto bg-[#EA5455] text-white"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <SuccessDialog
+                open={successOpen}
+                message={successMessage}
+                onClose={() => {
+                  setSuccessOpen(false);
+                  // keep existing close/reset behavior after success
+                  setIsEditing(false);
+                  setEditDraft(null);
+                  setSelectedClient(null);
+                  setViewOpen(false);
+                }}
+              />
 
               {/* EDIT MODE */}
               {isEditing && editDraft && (
@@ -923,15 +938,18 @@ export default function ClientList() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="editDueDate" className="text-white">
-                        Due Date (Auto)
-                      </Label>
-                      <Input
-                        id="editDueDate"
-                        readOnly
-                        value={calcNextDueDate(editDraft.startDate)}
-                        className="bg-[#161616] border-[#2A2A2A] text-white opacity-80"
-                      />
+                        <Label htmlFor="editDueDate" className="text-white">
+                          Due Date
+                        </Label>
+                        <Input
+                          id="editDueDate"
+                          type="date"
+                          value={editDraft.nextDueDate}
+                          onChange={(e) =>
+                            setEditDraft((p) => (p ? { ...p, nextDueDate: e.target.value } : p))
+                          }
+                          className="bg-[#161616] border-[#2A2A2A] text-white"
+                        />
                     </div>
                   </div>
 

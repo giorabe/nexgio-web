@@ -44,8 +44,8 @@ export type ClientUI = {
   contact: string;
   email: string;
   startDate: string;  // YYYY-MM-DD
-  dueDate: string;    // MM/DD/YYYY (computed)
-  nextDueDate: string; // YYYY-MM-DD (ISO) prefer this for display if available
+  dueDate: string;    // YYYY-MM-DD (ISO) prefer this when present
+  nextDueDate: string; // YYYY-MM-DD (ISO) authoritative when present
   hasDeposit: boolean;
   depositAmount: number;
   account: ClientAccount;

@@ -2,41 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ClientRow, ClientRowPatch, ClientUI } from "../types/client.types";
 import { createClient, deleteClient, fetchClients, updateClient } from "../services/clients.service";
 import { useTiers } from "./useTiers";
-
-function calcNextDueDate(startDateISO: string, now = new Date()) {
-  const start = new Date(startDateISO);
-  if (Number.isNaN(start.getTime())) return "";
-
-  const day = start.getDate();
-
-  const lastDayOfMonth = (year: number, monthIndex: number) =>
-    new Date(year, monthIndex + 1, 0).getDate();
-
-  let y = now.getFullYear();
-  let m = now.getMonth();
-
-  const candidateDay = Math.min(day, lastDayOfMonth(y, m));
-  let due = new Date(y, m, candidateDay);
-
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dueDateOnly = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-
-  if (dueDateOnly <= today) {
-    m += 1;
-    if (m > 11) {
-      m = 0;
-      y += 1;
-    }
-    const nextDay = Math.min(day, lastDayOfMonth(y, m));
-    due = new Date(y, m, nextDay);
-  }
-
-  const mm = String(due.getMonth() + 1).padStart(2, "0");
-  const dd = String(due.getDate()).padStart(2, "0");
-  const yyyy = due.getFullYear();
-  return `${mm}/${dd}/${yyyy}`;
-}
-
 function toClientStatus(v: string): ClientUI["status"] {
   if (v === "active" || v === "late" || v === "suspended") return v;
   return "active";
@@ -51,7 +16,6 @@ export function useClients() {
 
   const clients: ClientUI[] = useMemo(() => {
     const tierNameById = new Map(tiers.map((t) => [t.id, t.name]));
-
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -63,19 +27,10 @@ export function useClients() {
       contact: r.contact ?? "",
       email: r.email ?? "",
       startDate: r.start_date,
-
-      nextDueDate: r.next_due_date ?? "",
-
-      dueDate: r.next_due_date
-        ? (() => {
-            const d = new Date(r.next_due_date as string);
-            const mm = String(d.getMonth() + 1).padStart(2, "0");
-            const dd = String(d.getDate()).padStart(2, "0");
-            const yyyy = d.getFullYear();
-            return `${mm}/${dd}/${yyyy}`;
-          })()
-        : calcNextDueDate(r.start_date),
-
+        // Prefer explicit next_due_date from DB (ISO YYYY-MM-DD). Do NOT compute from start_date.
+        nextDueDate: r.next_due_date ?? "",
+        // dueDate is ISO YYYY-MM-DD when available; otherwise empty string
+        dueDate: r.next_due_date ?? "",
       hasDeposit: r.deposit_enabled,
       depositAmount: r.deposit_amount ?? 0,
       account: {
@@ -106,11 +61,10 @@ export function useClients() {
     void reload();
   }, [reload]);
 
-  // 🔥 FIX IS HERE
   const add = useCallback(async (input: {
     name: string;
     room: string;
-    tierId: string;
+    tierId: string; // uuid
     devices: number;
     contact: string;
     email: string;
@@ -123,14 +77,6 @@ export function useClients() {
   }) => {
     setError(null);
 
-    // convert MM/DD/YYYY → YYYY-MM-DD for DB
-    let nextDueISO: string | null = null;
-
-    if (input.nextDueDate) {
-      const [mm, dd, yyyy] = input.nextDueDate.split("/");
-      nextDueISO = `${yyyy}-${mm}-${dd}`;
-    }
-
     const { data, error: err } = await createClient({
       name: input.name.trim(),
       room: input.room.trim(),
@@ -140,10 +86,7 @@ export function useClients() {
       contact: input.contact,
       email: input.email,
       start_date: input.startDate,
-
-      // ✅ SAVE IT HERE
-      next_due_date: nextDueISO,
-
+      next_due_date: input.nextDueDate,
       deposit_enabled: input.hasDeposit,
       deposit_amount: input.depositAmount,
       account_username: input.username.trim(),
@@ -159,7 +102,21 @@ export function useClients() {
     return { ok: true as const };
   }, []);
 
-  const edit = useCallback(async (id: string, patch: any) => {
+  const edit = useCallback(async (id: string, patch: {
+    name?: string;
+    room?: string;
+    tierId?: string;
+    devices?: number;
+    status?: "active" | "late" | "suspended";
+    contact?: string;
+    email?: string;
+    startDate?: string;
+    nextDueDate?: string;
+    hasDeposit?: boolean;
+    depositAmount?: number;
+    username?: string;
+    password?: string;
+  }) => {
     setError(null);
 
     const dbPatch: ClientRowPatch = {};
@@ -172,6 +129,8 @@ export function useClients() {
     if (patch.contact !== undefined) dbPatch.contact = patch.contact.trim() || null;
     if (patch.email !== undefined) dbPatch.email = patch.email.trim() || null;
     if (patch.startDate !== undefined) dbPatch.start_date = patch.startDate;
+    if (patch.nextDueDate !== undefined) dbPatch.next_due_date = patch.nextDueDate;
+
     if (patch.hasDeposit !== undefined) dbPatch.deposit_enabled = patch.hasDeposit;
     if (patch.depositAmount !== undefined) dbPatch.deposit_amount = patch.depositAmount;
 
@@ -187,9 +146,8 @@ export function useClients() {
     }
 
     if (data) {
-      setRows((prev) => prev.map((r) => (r.id === id ? data : r)));
+    setRows((prev) => prev.map((r) => (r.id === id ? data : r)));
     }
-
     return { ok: true as const };
   }, []);
 

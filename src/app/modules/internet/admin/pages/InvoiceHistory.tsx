@@ -32,6 +32,8 @@ import {
 import StatusBadge from "@/app/components/StatusBadge";
 
 import { Search, Calendar, Eye, Download } from "lucide-react";
+import ConfirmDeleteModal from "@/app/shared/components/modals/ConfirmDeleteModal";
+import SuccessModal from "@/app/shared/components/modals/SuccessModal";
 
 // ✅ ADDED: useNavigate for SPA-safe routing (prevents Vercel 404 on deep links)
 import { useNavigate } from "react-router-dom";
@@ -77,6 +79,10 @@ export default function InvoiceHistory() {
   // Dialog + Selection State
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Payment | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
 
   // Invoice Preview Reference
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -178,20 +184,23 @@ export default function InvoiceHistory() {
   // Delete handler
   const handleDeleteInvoice = async () => {
     if (!selectedInvoice?.invoiceId) return;
-    if (!confirm("Delete this invoice?")) return;
-
+    if (isDeletingInvoice) return;
+    setIsDeletingInvoice(true);
     try {
       const res = await deleteInvoice(String(selectedInvoice.invoiceId));
       if ((res as any)?.error) {
         alert("Failed to delete invoice");
         return;
       }
-      setViewOpen(false);
-      setSelectedInvoice(null);
+      setConfirmOpen(false);
+      setSuccessMessage("Invoice deleted successfully.");
+      setSuccessOpen(true);
       await reloadInvoices();
     } catch (e) {
       console.error(e);
       alert("Failed to delete invoice");
+    } finally {
+      setIsDeletingInvoice(false);
     }
   };
 
@@ -449,8 +458,8 @@ export default function InvoiceHistory() {
                 >
                   <Download/> Save as Image
                 </Button>
-            <Button variant="destructive" onClick={handleDeleteInvoice}>
-              Delete Invoice
+            <Button variant="destructive" onClick={() => setConfirmOpen(true)} disabled={isDeletingInvoice}>
+              {isDeletingInvoice ? "Deleting..." : "Delete Invoice"}
             </Button>
             <Button variant="outline" onClick={() => setViewOpen(false)} className="w-full sm:w-auto">
               Close
@@ -459,6 +468,24 @@ export default function InvoiceHistory() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+        <ConfirmDeleteModal
+          open={confirmOpen}
+          message={`Are you sure you want to delete this Invoice? This action cannot be undone.`}
+          loading={isDeletingInvoice}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={async () => await handleDeleteInvoice()}
+        />
+
+        <SuccessModal
+          open={successOpen}
+          message={successMessage}
+          onOk={() => {
+            setSuccessOpen(false);
+            setViewOpen(false);
+            setSelectedInvoice(null);
+          }}
+        />
 
       {/* Results Info */}
       <div className="flex items-center justify-between text-[#A0A0A0] text-sm">

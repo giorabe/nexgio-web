@@ -4,11 +4,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { formatDateMMDDYY } from "@/app/utils/formatDate";
 import { listPaymentsAll, deletePayment, recomputeInvoiceFromPayments } from "@/app/modules/internet/admin/services/payments.service";
 import ReceiptTemplate, { exportReceiptToPng } from "@/app/modules/internet/admin/components/ReceiptTemplate";
+import ConfirmDeleteModal from "@/app/shared/components/modals/ConfirmDeleteModal";
+import SuccessModal from "@/app/shared/components/modals/SuccessModal";
 
 export default function ReceiptHistory() {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isDeletingReceipt, setIsDeletingReceipt] = useState(false);
   const [previousPaid, setPreviousPaid] = useState<number>(0);
 
   const load = async () => {
@@ -54,8 +60,8 @@ export default function ReceiptHistory() {
 
   const handleDelete = async () => {
     if (!selected) return;
-    if (!confirm("Delete this payment?")) return;
-
+    if (isDeletingReceipt) return;
+    setIsDeletingReceipt(true);
     try {
       await deletePayment(String(selected.id));
 
@@ -66,9 +72,14 @@ export default function ReceiptHistory() {
 
       await load();
       setSelected(null);
+      setConfirmOpen(false);
+      setSuccessMessage("Receipt deleted successfully.");
+      setSuccessOpen(true);
     } catch (e: any) {
       console.error(e);
       alert(e?.message ?? "Failed to delete payment");
+    } finally {
+      setIsDeletingReceipt(false);
     }
   };
 
@@ -207,8 +218,8 @@ export default function ReceiptHistory() {
                 Save as Image
               </Button>
 
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete
+              <Button variant="destructive" onClick={() => setConfirmOpen(true)} disabled={isDeletingReceipt}>
+                {isDeletingReceipt ? "Deleting..." : "Delete"}
               </Button>
 
               <Button variant="outline" onClick={() => setSelected(null)}>
@@ -218,6 +229,23 @@ export default function ReceiptHistory() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteModal
+        open={confirmOpen}
+        message={`Are you sure you want to delete this Receipt? This action cannot be undone.`}
+        loading={isDeletingReceipt}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => await handleDelete()}
+      />
+
+      <SuccessModal
+        open={successOpen}
+        message={successMessage}
+        onOk={() => {
+          setSuccessOpen(false);
+          setSelected(null);
+        }}
+      />
     </div>
   );
 }

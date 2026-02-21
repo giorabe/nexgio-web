@@ -23,8 +23,8 @@ export async function createClient(input: {
   status: "active" | "late" | "suspended";
   contact: string;
   email: string;
-  start_date: string;
-  next_due_date: string | null; 
+  start_date: string; // YYYY-MM-DD
+  next_due_date?: string | null;
   deposit_enabled: boolean;
   deposit_amount: number;
   account_username: string;
@@ -41,6 +41,7 @@ export async function createClient(input: {
       contact: input.contact.trim() || null,
       email: input.email.trim() || null,
       start_date: input.start_date,
+      next_due_date: input.next_due_date ?? null,
       deposit_enabled: input.deposit_enabled,
       deposit_amount: input.deposit_enabled ? input.deposit_amount : 0,
       account_username: input.account_username,

@@ -21,6 +21,7 @@ import {
 } from "../services/payments.service";
 import { updateClient } from "../services/clients.service";
 import type { InvoiceRow } from "../types/invoice.types";
+import SuccessModal from "@/app/shared/components/modals/SuccessModal";
 
 export default function PaymentsEntry() {
   const { clients, reload: reloadClients } = useClients();
@@ -60,6 +61,9 @@ export default function PaymentsEntry() {
   );
   const [notes, setNotes] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const loadInvoicesForClient = async (clientId: string) => {
     try {
@@ -97,7 +101,8 @@ export default function PaymentsEntry() {
   const handleSave = async () => {
     setMessage(null);
     if (!selectedClient) return setMessage("Select a client");
-
+    if (isSavingPayment) return;
+    setIsSavingPayment(true);
     try {
       const invoice = selectedInvoiceId
         ? invoices.find((i) => i.id === selectedInvoiceId) ?? null
@@ -120,7 +125,8 @@ export default function PaymentsEntry() {
           setMessage(res.error.message ?? "Failed to record payment");
           return;
         }
-        setMessage("Advance/credit recorded for client");
+        setSuccessMessage("Advance/credit recorded for client");
+        setSuccessOpen(true);
       } else {
         const entered = Number(amount || 0);
         if (entered <= 0) return setMessage("Payment amount must be > 0");
@@ -155,11 +161,12 @@ export default function PaymentsEntry() {
           return;
         }
 
-        setMessage(
+        setSuccessMessage(
           entered >= balanceDueNow
             ? "Payment recorded (may be overpayment)"
             : "Partial payment recorded"
         );
+        setSuccessOpen(true);
       }
 
       await reloadClients();
@@ -167,6 +174,8 @@ export default function PaymentsEntry() {
     } catch (e: any) {
       console.error(e);
       setMessage(e?.message ?? "Failed to record payment");
+    } finally {
+      setIsSavingPayment(false);
     }
   };
 
@@ -389,8 +398,8 @@ export default function PaymentsEntry() {
               </div>
 
               <div className="pt-4">
-                <Button onClick={handleSave} className="w-full bg-[#F5C400] text-black">
-                  Save Payment
+                <Button onClick={handleSave} disabled={isSavingPayment} className="w-full bg-[#F5C400] text-black">
+                  {isSavingPayment ? "Saving..." : "Save Payment"}
                 </Button>
                 {message && <p className="text-sm text-[#A0A0A0] mt-2">{message}</p>}
               </div>
@@ -398,6 +407,17 @@ export default function PaymentsEntry() {
           </div>
         </div>
       </div>
+      <SuccessModal
+        open={successOpen}
+        message={successMessage}
+        onOk={() => {
+          setSuccessOpen(false);
+          // reset form lightly
+          setAmount("0");
+          setNotes("");
+          setMessage(null);
+        }}
+      />
     </div>
   );
 }
