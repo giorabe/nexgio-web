@@ -14,7 +14,7 @@ export default function ReceiptTemplate(props: {
 
   const money = (n: any) => {
     const v = Number(n ?? 0);
-    return `₱${v.toLocaleString()}`;
+    return `₱${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const paymentDate = receipt?.payment_date ? formatDateMMDDYY(receipt.payment_date) : "-";
@@ -121,7 +121,18 @@ export default function ReceiptTemplate(props: {
           <Row label="Base Price" value={money(invBasePrice)} />
           <Row label="Extra Device Charge" value={money(invExtraDeviceCharge)} />
           <Row label="Unregistered Overcharge" value={money(invUnregisteredOvercharge)} />
-          <Row label="Rebate" value={money(invRebate)} />
+                  {(() => {
+                    const chargesSubtotal = Number(invBasePrice + invExtraDeviceCharge + invUnregisteredOvercharge);
+                    let rebatePercent = invRebate;
+                    let rebateAmount = 0;
+                    if (rebatePercent <= 100) {
+                      rebateAmount = Number(((chargesSubtotal * rebatePercent) / 100).toFixed(2));
+                    } else {
+                      rebateAmount = rebatePercent;
+                      rebatePercent = chargesSubtotal > 0 ? Number(((rebateAmount / chargesSubtotal) * 100).toFixed(2)) : 0;
+                    }
+                    return <Row label={`Rebate (${rebatePercent}%):`} value={`- ${money(rebateAmount)}`} />;
+                  })()}
           <Row label="Previous Balance" value={money(invPreviousBalance)} />
           <Row label="Deposit Applied" value={money(invDepositApplied)} />
           <Row label="Total Amount" value={money(invTotalAmount)} />

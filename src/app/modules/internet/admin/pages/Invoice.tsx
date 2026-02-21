@@ -115,14 +115,32 @@ export default function Invoice() {
   const depositBalance = hasDeposit ? computed.depositBalance : 0;
 
   const unregisteredOvercharge = Number(unregisteredOverchargeInput || 0);
-  const rebate = Number(rebateInput || 0);
 
-  const totalBeforeDeposit =
-    computed.basePrice +
-    computed.extraDeviceCharge +
-    unregisteredOvercharge -
-    rebate +
-    previousBalance;
+  // parse rebate input into percent 0-100 per rules
+  function parseRebatePercent(input: string): number {
+    if (!input) return 0;
+    const raw = String(input).trim();
+    if (raw === "") return 0;
+    // remove percent sign if present
+    const cleaned = raw.replace(/%/g, "").trim();
+    const n = Number(cleaned);
+    if (Number.isNaN(n)) return 0;
+    // if user provided decimal like 0.1, treat as 0.1% (explicit decimal preserved)
+    // otherwise treat numeric as whole percent (e.g., 10 -> 10%)
+    const percent = n;
+    // clamp 0..100
+    if (percent < 0) return 0;
+    if (percent > 100) return 100;
+    return percent;
+  }
+
+  const rebatePercent = parseRebatePercent(rebateInput || "0");
+
+  // charges subtotal (base + extra + unregistered) - rebate applies only to charges subtotal
+  const chargesSubtotal = computed.basePrice + computed.extraDeviceCharge + unregisteredOvercharge;
+  const rebateAmount = Number(((chargesSubtotal * rebatePercent) / 100).toFixed(2));
+
+  const totalBeforeDeposit = chargesSubtotal - rebateAmount + previousBalance;
 
   useEffect(() => {
     if (!selectedClient) return;
@@ -161,7 +179,8 @@ export default function Invoice() {
       const res = await createInvoiceForClient(selectedClient, {
         invoiceNumber: invoiceNum,
         unregisteredOvercharge,
-        rebate,
+        // store percent (0-100)
+        rebate: rebatePercent,
         previousBalance,
         depositApplied,
         paymentMethod: null,
@@ -222,7 +241,12 @@ export default function Invoice() {
   const handleSaveEdit = async () => {
     if (!savedInvoice) return;
     try {
-      const res: any = await updateInvoice(String(savedInvoice.id), editPatch);
+      // ensure rebate is numeric value (percent) before sending
+      const patchToSend = { ...editPatch } as any;
+      if (patchToSend.rebate !== undefined) {
+        patchToSend.rebate = Number(String(patchToSend.rebate || 0));
+      }
+      const res: any = await updateInvoice(String(savedInvoice.id), patchToSend);
       if (res?.error) {
         setMessage(`Update failed: ${res.error?.message ?? "unknown"}`);
         return;
@@ -246,13 +270,13 @@ export default function Invoice() {
     const extraDevices = Math.max(0, clientDevices - tierLimit);
     const extraDeviceCharge = extraDevices * 60;
 
-    const totalAmount =
-      basePrice +
-      extraDeviceCharge +
-      unregisteredOvercharge -
-      rebate +
-      previousBalance -
-      depositApplied;
+    // charges subtotal before rebate
+    const chargesSubtotalUI = basePrice + extraDeviceCharge + unregisteredOvercharge;
+    // determine rebate percent for UI from current input
+    const rebatePercentUI = parseRebatePercent(rebateInput || "0");
+    const rebateAmountUI = Number(((chargesSubtotalUI * rebatePercentUI) / 100).toFixed(2));
+
+    const totalAmount = Math.max(0, Number((chargesSubtotalUI - rebateAmountUI + previousBalance - depositApplied).toFixed(2)));
 
     return {
       id: String(savedInvoice?.id ?? ""),
@@ -264,7 +288,8 @@ export default function Invoice() {
       basePrice,
       extraDeviceCharge,
       unregisteredOvercharge,
-      rebate,
+      // store/display rebate as percent (0-100)
+      rebate: rebatePercentUI,
       previousBalance,
       depositApplied,
       totalAmount,
@@ -434,11 +459,20 @@ export default function Invoice() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-2 gap-3">
-                <span className="text-[#A0A0A0]">Rebate</span>
-                <div className="flex items-center gap-2"><span className="text-[#A0A0A0]">₱</span>
-                  <Input id="rebate" type="number" inputMode="numeric" value={rebateInput} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRebateInput(e.target.value)} className="w-32 bg-[#161616] border-[#2A2A2A] text-white text-right" disabled={!selectedClient} />
+              <div className="flex flex-col gap-1 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#A0A0A0]">Rebate (%)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#A0A0A0]">%</span>
+                    <Input id="rebate" type="text" inputMode="decimal" value={rebateInput} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRebateInput(e.target.value)} className="w-32 bg-[#161616] border-[#2A2A2A] text-white text-right" disabled={!selectedClient} />
+                  </div>
                 </div>
+                <p className="text-xs text-[#A0A0A0]">Example: 10 = 10%</p>
+              </div>
+
+              <div className="flex items-center justify-between py-2 gap-3">
+                <span className="text-[#A0A0A0]">Rebate ({rebatePercent}%):</span>
+                <span className="text-white">-₱{rebateAmount.toFixed(2)}</span>
               </div>
 
               <div className="flex items-center justify-between py-2 gap-3">
@@ -518,8 +552,8 @@ export default function Invoice() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-white">Rebate</Label>
-                <Input type="number" value={String(editPatch.rebate ?? 0)} onChange={(e) => setEditPatch((s:any)=>({...s, rebate: Number(e.target.value)}))} />
+                <Label className="text-white">Rebate (%)</Label>
+                <Input type="text" inputMode="decimal" value={String(editPatch.rebate ?? 0)} onChange={(e) => setEditPatch((s:any)=>({...s, rebate: e.target.value}))} />
               </div>
               <div>
                 <Label className="text-white">Previous Balance</Label>

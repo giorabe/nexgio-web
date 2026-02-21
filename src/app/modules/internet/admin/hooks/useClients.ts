@@ -156,8 +156,9 @@ export function useClients() {
 
     const { error: err } = await deleteClient(id);
     if (err) {
-      setError(err.message);
-      return { ok: false as const };
+      const msg = err.message || "Delete failed";
+      setError(msg);
+      return { ok: false as const, error: msg };
     }
 
     setRows((prev) => prev.filter((r) => r.id !== id));

@@ -22,14 +22,21 @@ export function InvoiceTemplate(props: {
 
   const money = (n: any) => {
     const v = Number(n ?? 0);
-    return `₱${v.toLocaleString()}`;
+    return `₱${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const rebateDisplay = () => {
-    const v = Number(invoice.rebate ?? 0);
-    if (v > 0) return `-₱${v.toLocaleString()}`;
-    return `₱${v.toLocaleString()}`;
-  };
+  const chargesSubtotal = Number((invoice.basePrice ?? 0) + (invoice.extraDeviceCharge ?? 0) + (invoice.unregisteredOvercharge ?? 0));
+
+  // Backwards-compat: stored rebate may be either percent (0-100) or legacy peso amount (>100 likely an amount)
+  let rebatePercent = Number(invoice.rebate ?? 0);
+  let rebateAmount = 0;
+  if (rebatePercent <= 100) {
+    rebateAmount = Number(((chargesSubtotal * rebatePercent) / 100).toFixed(2));
+  } else {
+    // legacy stored as amount
+    rebateAmount = Number(rebatePercent || 0);
+    rebatePercent = chargesSubtotal > 0 ? Number(((rebateAmount / chargesSubtotal) * 100).toFixed(2)) : 0;
+  }
 
   const depositDisplay = () => {
     const v = Number(invoice.depositApplied ?? 0);
@@ -127,7 +134,7 @@ export function InvoiceTemplate(props: {
           <Row label="Base Price" value={money(invoice.basePrice)} />
           <Row label="Extra Device Charge" value={money(invoice.extraDeviceCharge)} />
           <Row label="Unregistered Overcharge" value={money(invoice.unregisteredOvercharge)} />
-          <Row label="Rebate" value={rebateDisplay()} />
+          <Row label={`Rebate (${rebatePercent}%):`} value={`- ${money(rebateAmount)}`} />
           <Row label="Previous Balance" value={money(invoice.previousBalance)} />
           <Row label="Deposit Applied" value={depositDisplay()} />
         </div>

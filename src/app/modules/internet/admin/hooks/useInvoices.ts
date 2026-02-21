@@ -153,7 +153,10 @@ export function useInvoices() {
         const basePrice = tierPrice;
 
         const unregisteredOvercharge = input.unregisteredOvercharge ?? 0;
+        // rebate is stored as percent (0-100)
         const rebate = input.rebate ?? 0;
+        const chargesSubtotal = basePrice + extraDeviceCharge + unregisteredOvercharge;
+        const rebateAmount = Number(((chargesSubtotal * Number(rebate)) / 100).toFixed(2));
         // Auto-compute previous balance if not provided by caller.
         // computeClientPreviousBalance now returns the most recent invoice's negative balance (credit)
         // or 0 when there's no credit.
@@ -163,13 +166,7 @@ export function useInvoices() {
             : (await computeClientPreviousBalance(client.id));
         const depositApplied = input.depositApplied ?? 0;
 
-        const totalAmount =
-          basePrice +
-          extraDeviceCharge +
-          unregisteredOvercharge -
-          rebate +
-          previousBalance -
-          depositApplied;
+        const totalAmount = Math.max(0, Number((chargesSubtotal - rebateAmount + previousBalance - depositApplied).toFixed(2)));
 
         // Generate invoice number (allow override from input); retry once if unique constraint fails
         // Format: NGS-YYYYMMDD-<4digits>

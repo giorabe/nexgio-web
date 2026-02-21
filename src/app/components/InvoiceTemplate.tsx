@@ -21,7 +21,7 @@ export default function InvoiceTemplate({
   clientContact = "",
   clientEmail = "",
 }: Props) {
-  const fmtMoney = (n: number) => `₱${Number(n || 0).toLocaleString()}`;
+  const fmtMoney = (n: number) => `₱${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="bg-white text-black rounded-md">
@@ -104,7 +104,19 @@ export default function InvoiceTemplate({
             <Row label="Base Price" value={fmtMoney(invoice.basePrice)} />
             <Row label="Extra Device Charge" value={fmtMoney(invoice.extraDeviceCharge)} />
             <Row label="Unregistered Overcharge" value={fmtMoney(invoice.unregisteredOvercharge)} />
-            <Row label="Rebate" value={invoice.rebate ? `- ${fmtMoney(invoice.rebate)}` : fmtMoney(0)} />
+            {/* Rebate: support percent (preferred) or legacy amount */}
+            {(() => {
+              const chargesSubtotal = Number((invoice.basePrice ?? 0) + (invoice.extraDeviceCharge ?? 0) + (invoice.unregisteredOvercharge ?? 0));
+              let rebatePercent = Number(invoice.rebate ?? 0);
+              let rebateAmount = 0;
+              if (rebatePercent <= 100) {
+                rebateAmount = Number(((chargesSubtotal * rebatePercent) / 100).toFixed(2));
+              } else {
+                rebateAmount = Number(rebatePercent || 0);
+                rebatePercent = chargesSubtotal > 0 ? Number(((rebateAmount / chargesSubtotal) * 100).toFixed(2)) : 0;
+              }
+              return <Row label={`Rebate (${rebatePercent}%):`} value={`- ${fmtMoney(rebateAmount)}`} />;
+            })()}
             <Row label="Previous Balance" value={fmtMoney(invoice.previousBalance)} />
             <Row label="Deposit Applied" value={invoice.depositApplied ? `- ${fmtMoney(invoice.depositApplied)}` : fmtMoney(0)} />
           </div>

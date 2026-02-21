@@ -27,7 +27,7 @@ import StatusBadge from "@/app/components/StatusBadge";
 import { formatDateMMDDYY } from "@/app/utils/formatDate";
 
 import { Plus, Search, Eye } from "lucide-react";
-import SuccessDialog from "@/app/shared/components/SuccessDialog";
+// SuccessDialog removed: using inline error UI and closing dialogs on success
 
 interface ClientAccount {
   username: string;
@@ -89,8 +89,8 @@ export default function ClientList() {
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Edit inside View Details
   const [isEditing, setIsEditing] = useState(false);
@@ -236,11 +236,34 @@ export default function ClientList() {
 
   const deleteClient = async () => {
     if (!selectedClient) return;
-    const res = await remove(selectedClient.id);
-    if (res.ok) {
-      setConfirmOpen(false);
-      setSuccessMessage("Client deleted successfully.");
-      setSuccessOpen(true);
+    setDeleteError(null);
+    setIsDeletingClient(true);
+    try {
+      const res = await remove(selectedClient.id);
+      if (res.ok) {
+        // close confirm + details and clear selection (no success modal)
+        setConfirmOpen(false);
+        setViewOpen(false);
+        setSelectedClient(null);
+      } else {
+        const errMsg = typeof (res as any).error === "string" ? (res as any).error : (res as any).error?.message ?? String(res);
+        const msgLower = String(errMsg).toLowerCase();
+        if (
+          msgLower.includes("violates foreign key") ||
+          msgLower.includes("invoices_client_id_fkey") ||
+          msgLower.includes("foreign key")
+        ) {
+          setDeleteError(
+            "Cannot delete this client because invoices/receipts exist. Delete invoices/receipts first."
+          );
+        } else {
+          setDeleteError(`Failed to delete client: ${errMsg}`);
+        }
+      }
+    } catch (e: any) {
+      setDeleteError(e?.message ?? String(e));
+    } finally {
+      setIsDeletingClient(false);
     }
   };
 
@@ -796,7 +819,10 @@ export default function ClientList() {
                       type="button"
                       variant="outline"
                       className="flex-1 border-[#2A2A2A] text-[#EA5455] hover:bg-[#EA5455]/10"
-                      onClick={() => setConfirmOpen(true)}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setConfirmOpen(true);
+                      }}
                     >
                       Delete
                     </Button>
@@ -819,39 +845,37 @@ export default function ClientList() {
 
                   <div className="py-2 text-[#A0A0A0]">Are you sure you want to delete this Client? This action cannot be undone.</div>
 
-                  <DialogFooter className="w-full">
-                      <div className="flex flex-col sm:flex-row justify-center gap-3 w-full">
-                        <Button
-                          variant="outline"
-                          onClick={() => setConfirmOpen(false)}
-                          className="w-full sm:w-auto border-[#2A2A2A] text-white"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={async () => await deleteClient()}
-                          variant="destructive"
-                          className="w-full sm:w-auto bg-[#EA5455] text-white"
-                        >
-                          Delete
-                        </Button>
-                      </div>
+                  {deleteError && (
+                    <p className="mt-3 text-sm text-center text-red-400 break-words">{deleteError}</p>
+                  )}
+
+                  <DialogFooter>
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center sm:items-center w-full">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setConfirmOpen(false);
+                        }}
+                        disabled={isDeletingClient}
+                        className="w-full sm:w-40 border-[#2A2A2A] text-white"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={async () => await deleteClient()}
+                        variant="destructive"
+                        disabled={isDeletingClient}
+                        className="w-full sm:w-40 bg-[#EA5455] text-white"
+                      >
+                        {isDeletingClient ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
 
-              <SuccessDialog
-                open={successOpen}
-                message={successMessage}
-                onClose={() => {
-                  setSuccessOpen(false);
-                  // keep existing close/reset behavior after success
-                  setIsEditing(false);
-                  setEditDraft(null);
-                  setSelectedClient(null);
-                  setViewOpen(false);
-                }}
-              />
+              {/* Success dialog removed: no success modal shown after add/delete */}
 
               {/* EDIT MODE */}
               {isEditing && editDraft && (
