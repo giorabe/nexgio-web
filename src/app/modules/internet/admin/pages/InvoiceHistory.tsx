@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import type React from "react";
 import type { InvoiceRowWithClient, InvoiceUI } from "@/app/modules/internet/admin/types/invoice.types";
 
-import { InvoiceTemplate } from "@/app/modules/internet/admin/components/InvoiceTemplate";
+import { InvoiceTemplate, exportInvoiceToPng } from "@/app/modules/internet/admin/components/InvoiceTemplate";
 import { formatDateMMDDYY } from "@/app/utils/formatDate";
 
 import { Button } from "@/app/shared/ui/button";
@@ -218,38 +218,25 @@ export default function InvoiceHistory() {
 
   // ✅ FIXED PNG Export (portrait, no half-cut)
   const handleSaveImage = async () => {
-    if (!invoiceRef.current || !selectedInvoice) return;
+    if (!selectedInvoice) return;
 
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      const blob = await exportInvoiceToPng(
+        paymentToInvoiceUI(selectedInvoice),
+        selectedInvoice.clientName,
+        selectedInvoice.clientRoom,
+        selectedInvoice.clientContact,
+        selectedInvoice.clientEmail
+      );
 
-      const clone = invoiceRef.current.cloneNode(true) as HTMLElement;
-
-      clone.style.position = "fixed";
-      clone.style.left = "-99999px";
-      clone.style.top = "0";
-      clone.style.width = "720px";
-      clone.style.maxWidth = "720px";
-      clone.style.background = "#ffffff";
-      clone.style.padding = "0";
-      clone.style.overflow = "hidden";
-      clone.style.zIndex = "999999";
-
-      document.body.appendChild(clone);
-
-      const canvas = await html2canvas(clone, {
-        scale: 3,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        allowTaint: false,
-      });
-
-      document.body.removeChild(clone);
-
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = `${selectedInvoice.invoiceNumber}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.href = url;
+      document.body.appendChild(link);
       link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("PNG export failed:", error);
       alert("Failed to export image.");
