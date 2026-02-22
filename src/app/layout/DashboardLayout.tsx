@@ -9,7 +9,8 @@ const pageTitles: Record<string, string> = {
   "/dashboard/clients": "Client List",
   "/dashboard/tiers": "Internet Tiers",
   "/dashboard/invoice": "Invoice Generation",
-  "/dashboard/payments": "Invoice History",
+    "/dashboard/invoice-history": "Invoice History",
+    "/dashboard/payments": "Payments Entry",
   "/dashboard/settings": "Settings",
 };
 

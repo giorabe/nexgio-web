@@ -21,9 +21,9 @@ const navItems: NavItem[] = [
   { label: "Client List", path: "/dashboard/clients", icon: <Users className="w-5 h-5" /> },
   { label: "Tiers", path: "/dashboard/tiers", icon: <Layers className="w-5 h-5" /> },
   { label: "Invoice", path: "/dashboard/invoice", icon: <FileText className="w-5 h-5" /> },
-  { label: "Invoice History", path: "/dashboard/payments", icon: <CreditCard className="w-5 h-5" /> },
+  { label: "Invoice History", path: "/dashboard/invoice-history", icon: <CreditCard className="w-5 h-5" /> },
   { label: "Receipt History", path: "/dashboard/receipts", icon: <CreditCard className="w-5 h-5" /> },
-  { label: "Payments Entry", path: "/dashboard/payments-entry", icon: <CreditCard className="w-5 h-5" /> },
+  { label: "Payments Entry", path: "/dashboard/payments", icon: <CreditCard className="w-5 h-5" /> },
   { label: "Settings", path: "/dashboard/settings", icon: <Settings className="w-5 h-5" /> },
 ];
 
