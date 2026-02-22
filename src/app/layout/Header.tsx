@@ -50,6 +50,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
   const handleLogout = async () => {
     setMenuOpen(false);
     await supabase.auth.signOut();
+    try { localStorage.removeItem("role"); } catch {}
     navigate("/login");
   };
 
