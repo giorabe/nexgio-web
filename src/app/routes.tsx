@@ -1,7 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import RequireAuth from "./layout/RequireAuth";
-import RequireAdmin from "./shared/guards/RequireAdmin";
-import RequireClient from "./shared/guards/RequireClient";
+import RequireRole from "./shared/guards/RequireRole";
 
 import Login from "./pages/Login";
 import ServiceSelector from "./pages/ServiceSelector";
@@ -27,6 +26,7 @@ import ClientDashboardLayout from "./modules/internet/client/layout/ClientDashbo
 
 export const router = createBrowserRouter([
   { path: "/", element: <ClientModuleServiceSelector /> },
+  { path: "/internet", element: <ClientModuleServiceSelector /> },
   { path: "/login", element: <Login /> },
 
   // Client public pages (use /internet/client/*)
@@ -37,9 +37,9 @@ export const router = createBrowserRouter([
   {
     path: "/internet/client",
     element: (
-      <RequireClient>
+      <RequireRole role="client">
         <ClientDashboardLayout />
-      </RequireClient>
+      </RequireRole>
     ),
     children: [
       { index: true, element: <ClientDashboard /> },
@@ -57,9 +57,9 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: (
-      <RequireAdmin>
+      <RequireRole role="admin">
         <DashboardLayout />
-      </RequireAdmin>
+      </RequireRole>
     ),
     children: [
       { index: true, element: <DashboardHome />, handle: { title: "Dashboard" } },
