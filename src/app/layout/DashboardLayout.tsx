@@ -11,6 +11,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/invoice": "Invoice Generation",
     "/dashboard/invoice-history": "Invoice History",
     "/dashboard/payments": "Payments Entry",
+    "/dashboard/receipts": "Receipt History",
   "/dashboard/settings": "Settings",
 };
 
