@@ -431,7 +431,7 @@ export default function ClientList() {
 
                   <div className="space-y-2">
                     <Label htmlFor="dueDate" className="text-white">
-                      Due Date
+                      Next Due Date
                     </Label>
                     <Input
                       id="dueDate"
@@ -741,7 +741,7 @@ export default function ClientList() {
                       <p className="text-white">{formatDateMMDDYY(selectedClient.startDate)}</p>
                     </div>
                     <div>
-                      <p className="text-[#A0A0A0] text-sm">Due Date</p>
+                      <p className="text-[#A0A0A0] text-sm">Next Due Date</p>
                       <p className="text-white">{formatDateMMDDYY(selectedClient.dueDate)}</p>
                     </div>
                     <div>
@@ -963,7 +963,7 @@ export default function ClientList() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="editDueDate" className="text-white">
-                          Due Date
+                          Next Due Date
                         </Label>
                         <Input
                           id="editDueDate"
