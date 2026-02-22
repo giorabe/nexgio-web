@@ -24,9 +24,26 @@ export const router = createBrowserRouter([
   // Admin login
   { path: "/admin/login", element: <Login /> },
 
-  // client routes removed
+  // Admin dashboard and protected routes
+  {
+    path: "/dashboard",
+    element: (
+      <RequireAuth>
+        <DashboardLayout />
+      </RequireAuth>
+    ),
+    children: [
+      { index: true, element: <DashboardHome /> },
+      { path: "clients", element: <ClientList /> },
+      { path: "tiers", element: <Tiers /> },
+      { path: "invoice", element: <Invoice /> },
+      { path: "invoice-history", element: <InvoiceHistory /> },
+      { path: "payments", element: <PaymentsEntry /> },
+      { path: "receipts", element: <ReceiptHistory /> },
+      { path: "settings", element: <Settings /> },
+    ],
+  },
 
-  
   // fallback
   { path: "*", element: <div>Page Not Found</div> },
 ]);
