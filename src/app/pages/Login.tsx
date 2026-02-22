@@ -31,6 +31,10 @@ export default function Login() {
     if (data.session) {
       try {
         localStorage.setItem("role", "admin");
+        // Record the login timestamp so we can enforce an absolute session expiry
+        try {
+          localStorage.setItem("loginAt", String(Date.now()));
+        } catch {}
       } catch {}
       navigate("/dashboard");
     }
