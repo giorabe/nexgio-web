@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import RequireAuth from "./layout/RequireAuth";
 
 import Login from "./pages/Login";
@@ -26,8 +26,9 @@ import ClientLogin from "./modules/internet/client/pages/ClientLogin";
 import ClientServiceSelector from "./modules/internet/client/pages/ClientServiceSelector";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/client/services" replace /> },
+  { path: "/", element: <ClientServiceSelector /> },
   { path: "/login", element: <Login /> },
+  { path: "/admin", element: <ServiceSelector /> },
 
   // Admin login
   { path: "/admin/login", element: <Login /> },
@@ -59,7 +60,7 @@ export const router = createBrowserRouter([
     path: "/client",
     element: <ClientPortalLayout />,
     children: [
-      { index: true, element: <ClientDashboard /> },
+      { index: true, element: <ClientServiceSelector /> },
       { path: "dashboard", element: <ClientDashboard /> },
       { path: "invoices", element: <ClientInvoices /> },
       { path: "receipts", element: <ClientReceipts /> },

@@ -38,14 +38,28 @@ export default function ClientServiceSelector() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#161616] to-[#0F0F0F] flex items-center justify-center p-6">
       <div className="max-w-5xl w-full relative">
-        {/* Switch to Admin button (top-right) */}
-        <div className="absolute top-4 right-4">
+        {/* Switch to Admin button (desktop: top-right, mobile: floating icon) */}
+        <div className="hidden md:block absolute top-4 right-4">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/admin")}
+            aria-label="Switch to Admin"
+            title="Switch to Admin"
             className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-[#2A2A2A] text-[#F5C400] rounded-full hover:bg-white/10 transition-colors"
           >
             <Repeat className="w-4 h-4" />
             <span className="text-sm font-medium">Switch to Admin</span>
+          </button>
+        </div>
+
+        {/* Mobile floating switch button */}
+        <div className="md:hidden fixed bottom-4 right-4 z-50">
+          <button
+            onClick={() => navigate("/admin")}
+            aria-label="Switch to Admin"
+            title="Switch to Admin"
+            className="inline-flex items-center justify-center w-12 h-12 bg-white/5 border border-[#2A2A2A] text-[#F5C400] rounded-lg shadow-lg hover:bg-white/10 transition-colors"
+          >
+            <Repeat className="w-5 h-5" />
           </button>
         </div>
         {/* back button intentionally removed — client login is reached by selecting Internet */}
@@ -53,8 +67,8 @@ export default function ClientServiceSelector() {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#F5C400] to-[#F5C400]/80 flex items-center justify-center shadow-lg shadow-[#F5C400]/20">
-              <img src={Logo} alt="NexGio Logo" className="w-16 h-auto" />
+            <div className="w-20 h-20 rounded-2xl bg-[#F5C400] flex items-center justify-center shadow-lg shadow-[#F5C400]/20">
+              <img src={Logo} alt="NexGio Logo" className="w-20 h-auto rounded-lg"/>
             </div>
           </div>
           <h1 className="text-4xl font-bold text-white mb-3">Welcome to NexGio Client Portal</h1>
