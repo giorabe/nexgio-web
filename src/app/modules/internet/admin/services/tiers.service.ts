@@ -45,7 +45,7 @@ export async function deleteTier(id: string) {
 export async function fetchTierById(tierId: string) {
   return supabase
     .from("tiers")
-    .select("id, price, device_limit")
+    .select("id, name, price, device_limit")
     .eq("id", tierId)
     .maybeSingle();
 }

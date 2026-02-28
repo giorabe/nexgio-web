@@ -42,6 +42,15 @@ export default function Login() {
 
   return (
     <AuthLayout title="Admin Login">
+      {/* Back button to service selector */}
+      <div className="mb-4">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-[#A0A0A0] hover:text-[#F5C400] transition-colors"
+        >
+          <span className="text-sm">← Back to Services</span>
+        </button>
+      </div>
       <form onSubmit={handleLogin} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="email" className="text-white">

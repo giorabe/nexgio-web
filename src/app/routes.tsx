@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import RequireAuth from "./layout/RequireAuth";
 
 import Login from "./pages/Login";
@@ -15,10 +15,18 @@ import ReceiptHistory from "./modules/internet/admin/pages/ReceiptHistory";
 import PaymentsEntry from "./modules/internet/admin/pages/PaymentsEntry";
 import Settings from "./modules/internet/admin/pages/Settings";
 
-// client routes removed
+// Client-side portal (public)
+import ClientPortalLayout from "./modules/internet/client/pages/ClientPortalLayout";
+import ClientDashboard from "./modules/internet/client/pages/ClientDashboard";
+import ClientInvoices from "./modules/internet/client/pages/ClientInvoices";
+import ClientReceipts from "./modules/internet/client/pages/ClientReceipts";
+import ClientServiceInfo from "./modules/internet/client/pages/ClientServiceInfo";
+import ClientSettings from "./modules/internet/client/pages/ClientSettings";
+import ClientLogin from "./modules/internet/client/pages/ClientLogin";
+import ClientServiceSelector from "./modules/internet/client/pages/ClientServiceSelector";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <ServiceSelector /> },
+  { path: "/", element: <Navigate to="/client/services" replace /> },
   { path: "/login", element: <Login /> },
 
   // Admin login
@@ -41,6 +49,22 @@ export const router = createBrowserRouter([
       { path: "payments", element: <PaymentsEntry /> },
       { path: "receipts", element: <ReceiptHistory /> },
       { path: "settings", element: <Settings /> },
+    ],
+  },
+
+  // Client portal routes
+  { path: "/client/login", element: <ClientLogin /> },
+  { path: "/client/services", element: <ClientServiceSelector /> },
+  {
+    path: "/client",
+    element: <ClientPortalLayout />,
+    children: [
+      { index: true, element: <ClientDashboard /> },
+      { path: "dashboard", element: <ClientDashboard /> },
+      { path: "invoices", element: <ClientInvoices /> },
+      { path: "receipts", element: <ClientReceipts /> },
+      { path: "service-info", element: <ClientServiceInfo /> },
+      { path: "settings", element: <ClientSettings /> },
     ],
   },
 

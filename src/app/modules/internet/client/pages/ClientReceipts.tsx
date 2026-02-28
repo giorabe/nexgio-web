@@ -1,0 +1,282 @@
+import { useState } from "react";
+import { Search, Download, Eye, Calendar, CheckCircle } from "lucide-react";
+import { Input } from "@/app/shared/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/shared/ui/select";
+import { Button } from "@/app/shared/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/app/shared/ui/dialog";
+import { useClientPortal } from "@/app/modules/internet/client/hooks/useClientPortal";
+import ReceiptTemplate, { exportReceiptToPng } from "@/app/modules/internet/admin/components/ReceiptTemplate";
+import { sumPreviousPaid } from "@/app/modules/internet/admin/services/payments.service";
+
+export default function ClientReceipts() {
+  const { client, payments = [], loading: portalLoading } = useClientPortal();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [methodFilter, setMethodFilter] = useState("all");
+  const [selected, setSelected] = useState<any | null>(null);
+  const [previousPaid, setPreviousPaid] = useState<number>(0);
+
+  const receipts = Array.isArray(payments) ? payments : [];
+
+  const filteredReceipts = receipts.filter((receipt: any) => {
+    const id = String(receipt.id ?? "");
+    const invoiceId = String(receipt.invoice_id ?? (receipt.invoices?.invoice_number ?? ""));
+    const period = String(receipt.payment_date ?? "");
+    const matchesSearch =
+      id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoiceId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      period.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesMethod = methodFilter === "all" || String(receipt.payment_method ?? "") === methodFilter;
+    return matchesSearch && matchesMethod;
+  });
+
+  const totalPaid = receipts.reduce((sum: number, r: any) => sum + Number(r.amount ?? 0), 0);
+  const paymentMethods = Array.from(new Set(receipts.map((r: any) => r.payment_method ?? ""))).filter(Boolean);
+
+  const openReceipt = async (r: any) => {
+    setSelected(r);
+    try {
+      if (r?.invoice_id) {
+        const { sum, error } = await sumPreviousPaid(String(r.invoice_id), {
+          id: r.id,
+          payment_date: r.payment_date ?? null,
+          created_at: r.created_at ?? null,
+        } as any);
+        if (!error) setPreviousPaid(Number(sum ?? 0));
+        else setPreviousPaid(0);
+      } else {
+        setPreviousPaid(0);
+      }
+    } catch (e) {
+      console.error("openReceipt.sumPreviousPaid", e);
+      setPreviousPaid(0);
+    }
+  };
+
+  const downloadReceipt = async () => {
+    if (!selected) return;
+    try {
+      const blob = await exportReceiptToPng(
+        selected,
+        client?.name ?? client?.full_name ?? "",
+        client?.room ?? client?.room_number ?? "",
+        client?.contact ?? "",
+        client?.email ?? "",
+        previousPaid
+      );
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `receipt-${selected?.id ?? "unknown"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("exportReceipt failed", err);
+      alert("Failed to export receipt image.");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-[#28C76F]/10 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-[#28C76F]" />
+            </div>
+            <p className="text-[#A0A0A0] text-sm">Total Payments</p>
+          </div>
+          <p className="text-3xl font-bold text-white">₱{totalPaid.toLocaleString()}</p>
+          <p className="text-[#A0A0A0] text-sm mt-2">
+            {receipts.length} receipts
+          </p>
+        </div>
+        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-6">
+          <p className="text-[#A0A0A0] text-sm mb-2">Latest Payment</p>
+          <p className="text-3xl font-bold text-[#F5C400]">
+            {receipts.length > 0 ? new Date(receipts[0].payment_date).toLocaleDateString("en-US", { 
+              month: "short", 
+              day: "numeric",
+              year: "numeric"
+            }) : "-"}
+          </p>
+          <p className="text-[#A0A0A0] text-sm mt-2">
+            {receipts.length > 0 ? receipts[0].payment_method : "-"}
+          </p>
+        </div>
+        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-6">
+          <p className="text-[#A0A0A0] text-sm mb-2">Payment Methods</p>
+          <p className="text-3xl font-bold text-white">{paymentMethods.length}</p>
+          <p className="text-[#A0A0A0] text-sm mt-2">
+            {paymentMethods.slice(0, 2).join(", ")}
+            {paymentMethods.length > 2 ? `, +${paymentMethods.length - 2}` : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A0A0A0]" />
+          <Input
+            type="search"
+            placeholder="Search by receipt, invoice number or period..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-[#161616] border-[#2A2A2A] text-white placeholder:text-[#A0A0A0] focus:border-[#F5C400]"
+          />
+        </div>
+        <Select value={methodFilter} onValueChange={setMethodFilter}>
+          <SelectTrigger className="w-full md:w-48 bg-[#161616] border-[#2A2A2A] text-white">
+            <SelectValue placeholder="All Methods" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Methods</SelectItem>
+            <SelectItem value="GCash">GCash</SelectItem>
+            <SelectItem value="PayMaya">PayMaya</SelectItem>
+            <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+            <SelectItem value="Cash">Cash</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Receipt List */}
+      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl overflow-hidden">
+        <div className="divide-y divide-[#2A2A2A]">
+          {filteredReceipts.map((receipt) => (
+            <div
+              key={receipt.id}
+              className="p-6 hover:bg-[#161616] transition-colors"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-[#28C76F] font-semibold text-lg">
+                      {receipt.id}
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-[#28C76F]/10 text-[#28C76F] border-[#28C76F]/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-current mr-2" />
+                      Paid
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-white font-medium text-lg mb-1">{String(receipt.invoices?.invoice_number ?? receipt.invoice_id ?? "-")}</p>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-[#A0A0A0]">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          Paid: {receipt.payment_date ? new Date(receipt.payment_date).toLocaleDateString("en-US", { 
+                            month: "short", 
+                            day: "numeric", 
+                            year: "numeric" 
+                          }) : "-"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>{receipt.payment_method ?? "-"}</span>
+                      </div>
+                      <div>
+                        Invoice: <span className="font-mono text-[#F5C400]">{String(receipt.invoices?.invoice_number ?? receipt.invoice_id ?? "-")}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="text-left sm:text-right">
+                    <p className="text-2xl font-bold text-[#28C76F]">
+                      ₱{receipt.amount.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openReceipt(receipt)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSelected(receipt); downloadReceipt(); }}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Controlled dialog that shows the receipt preview using admin template */}
+      <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
+        <DialogContent
+          className="
+            bg-[#1E1E1E] border-[#2A2A2A] text-white
+            w-[95vw] max-w-[980px]
+            max-h-[92vh]
+            overflow-hidden
+          "
+        >
+          <DialogHeader>
+            <DialogTitle>Receipt {selected?.invoices?.invoice_number ?? (selected?.id ?? "")}</DialogTitle>
+          </DialogHeader>
+
+          <div className="overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>
+            {selected && (
+              <div className="space-y-4">
+                <div className="flex justify-center">
+                  <div
+                    style={{
+                      width: 720,
+                      height: "100%",
+                      background: "#222",
+                      borderRadius: 16,
+                      boxShadow: "0 0 24px #0004",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "auto",
+                      padding: 24,
+                    }}
+                  >
+                    <ReceiptTemplate
+                      receipt={selected}
+                      clientName={client?.name}
+                      clientRoom={client?.room}
+                      clientContact={client?.contact}
+                      clientEmail={client?.email}
+                      previousPaid={previousPaid}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={async () => {
+                await downloadReceipt();
+              }}
+              className="bg-[#10B981] text-white"
+            >
+              Save as Image
+            </Button>
+
+            <Button variant="outline" onClick={() => setSelected(null)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Results Info */}
+      <div className="flex items-center justify-between text-[#A0A0A0] text-sm">
+        <p>
+          Showing {filteredReceipts.length} of {receipts.length} receipts
+        </p>
+      </div>
+    </div>
+  );
+}

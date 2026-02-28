@@ -15,15 +15,67 @@ export async function fetchClients() {
     .returns<ClientRow[]>();
 }
 
+/**
+ * IMPORTANT:
+ * Do NOT use "\" line breaks here.
+ * Supabase expects a clean comma-separated string.
+ */
+const SELECT_INTERFACE_FIELDS =
+  [
+    "client_id",
+    "name",
+    "room",
+    "account_username",
+    "status",
+    "current_devices",
+    "tier_id",
+    "tier_name",
+    "tier_speed",
+    "tier_device_limit",
+    "tier_price",
+    "total_unpaid",
+    "next_due_date",
+    "invoice_id",
+    "invoice_due_date",
+    "invoice_date",
+  ].join(",");
+
+export async function fetchClientInterfaceList() {
+  return supabase
+    .from("client_interface")
+    .select(SELECT_INTERFACE_FIELDS)
+    .order("name", { ascending: true })
+    .returns<any[]>();
+}
+
+export async function fetchClientInterfaceByIdentifier(identifier: string) {
+  return supabase
+    .from("client_interface")
+    .select(SELECT_INTERFACE_FIELDS)
+    .or(`client_id.eq.${identifier},account_username.eq.${identifier}`)
+    .maybeSingle();
+}
+
+export async function authenticateClient(account_username: string, account_password: string) {
+  return supabase
+    .from("clients")
+    .select(SELECT_FIELDS)
+    .eq("account_username", account_username)
+    .eq("account_password", account_password)
+    .eq("account_status", "active")
+    .single()
+    .returns<ClientRow>();
+}
+
 export async function createClient(input: {
   name: string;
   room: string;
-  tier_id: string; // uuid
+  tier_id: string;
   devices: number;
   status: "active" | "late" | "suspended";
   contact: string;
   email: string;
-  start_date: string; // YYYY-MM-DD
+  start_date: string;
   next_due_date?: string | null;
   deposit_enabled: boolean;
   deposit_amount: number;
@@ -54,7 +106,6 @@ export async function createClient(input: {
 }
 
 export async function updateClient(id: string, patch: ClientRowPatch) {
-  // Enforce account_status always active
   const nextPatch: ClientRowPatch = { ...patch, account_status: "active" };
 
   return supabase
@@ -70,10 +121,6 @@ export async function deleteClient(id: string) {
   return supabase.from("clients").delete().eq("id", id);
 }
 
-/**
- * Lightweight fetch for tier subscriber counting.
- * Only fetches id, tier_id, status (minimal data for counting active clients per tier).
- */
 export type ClientCountRow = {
   id: string;
   tier_id: string;
@@ -81,8 +128,5 @@ export type ClientCountRow = {
 };
 
 export async function fetchClientsForTierCounts() {
-  return supabase
-    .from("clients")
-    .select("id,tier_id,status")
-    .returns<ClientCountRow[]>();
+  return supabase.from("clients").select("id,tier_id,status").returns<ClientCountRow[]>();
 }

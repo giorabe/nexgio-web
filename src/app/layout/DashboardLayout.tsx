@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, useLocation } from "react-router";
+import { Outlet, useLocation } from "react-router-dom";
 import { Toaster } from "@/app/shared/ui/sonner";
 import Sidebar from "./Sidebar";
 import Header from "./Header";

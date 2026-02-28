@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router";
-import { Wifi, Palette, Wrench } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Wifi, Palette, Wrench, Repeat } from "lucide-react";
 
 interface ServiceCardProps {
   icon: React.ReactNode;
@@ -83,7 +83,17 @@ export default function ServiceSelector() {
 
   return (
     <div className="min-h-screen bg-[#0F0F0F] py-12 px-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto relative">
+        {/* Switch to Client button (top-right) */}
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={() => navigate("/client/services")}
+            className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-[#2A2A2A] text-[#F5C400] rounded-full hover:bg-white/10 transition-colors"
+          >
+            <Repeat className="w-4 h-4" />
+            <span className="text-sm font-medium">Switch to Client</span>
+          </button>
+        </div>
         {/* Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-[#F5C400] to-[#F5C400]/80 mb-6">
