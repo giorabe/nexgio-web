@@ -223,9 +223,7 @@ export async function listInvoices(limit = 50) {
  */
 export async function computeClientPreviousBalance(clientId: string, excludeInvoiceId?: string) {
   try {
-    // For future invoices, derive "previous balance" from the most recent invoice's balance.
-    // If the last invoice has a negative balance_due (credit), return that negative value.
-    // Otherwise return 0.
+    // For future invoices, derive "previous balance" from the most recent invoice's balance_due (positive or negative).
     const { data: latestInv, error: invErr } = await supabase
       .from("invoices")
       .select("id,balance_due")
@@ -240,7 +238,7 @@ export async function computeClientPreviousBalance(clientId: string, excludeInvo
     }
 
     const lastBalance = Number((latestInv as any)?.balance_due ?? 0);
-    return lastBalance < 0 ? lastBalance : 0;
+    return lastBalance;
   } catch (err) {
     console.error("computeClientPreviousBalance unexpected error", err);
     return 0;
