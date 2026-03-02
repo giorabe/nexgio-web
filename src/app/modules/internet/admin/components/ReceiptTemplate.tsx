@@ -38,36 +38,49 @@ export default function ReceiptTemplate(props: {
   const invDepositApplied = Number(receipt?.invoices?.deposit_applied ?? 0);
   const invTotalAmount = Number(receipt?.invoices?.total_amount ?? 0);
 
+  // Responsive style for mobile font size and layout
+  // This will be injected as a <style> tag inside the component
+  const responsiveStyle = `
+    @media (max-width: 600px) {
+      .receipt-root {
+        font-size: 12px !important;
+      }
+      .receipt-card {
+        width: 98vw !important;
+        min-width: 0 !important;
+        padding: 8px !important;
+      }
+      .receipt-logo {
+        height: 32px !important;
+      }
+      .receipt-title {
+        font-size: 15px !important;
+      }
+    }
+  `;
+
   return (
-    <div
-      style={{
-        background: "#0f0f0f",
-        padding: 18,
+    <div className="receipt-root" style={{ background: "#0f0f0f", padding: 18, borderRadius: 12, width: "fit-content", maxWidth: "100%" }}>
+      {/* Responsive style injected for mobile */}
+      <style>{responsiveStyle}</style>
+      <div className="receipt-card" style={{
+        background: "#ffffff",
+        color: "#000000",
         borderRadius: 12,
-        width: "fit-content",
+        padding: 22,
+        width: 640,
         maxWidth: "100%",
-      }}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          color: "#000000",
-          borderRadius: 12,
-          padding: 22,
-          width: 640,
-          maxWidth: "100%",
-          boxSizing: "border-box",
-          fontFamily:
-            'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"',
-        }}
-      >
+        boxSizing: "border-box",
+        fontFamily:
+          'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"',
+      }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: 'center' }}>
           <div>
-            <img src={Logo} alt="NexGio Logo" style={{ height: 48, width: "auto", display: "block" }} />
+            <img className="receipt-logo" src={Logo} alt="NexGio Logo" style={{ height: 48, width: "auto", display: "block" }} />
           </div>
 
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontWeight: 700, fontSize: 18 }}>NexGio Solutions</div>
+            <div className="receipt-title" style={{ fontWeight: 700, fontSize: 18 }}>NexGio Solutions</div>
             <div style={{ color: "#4B5563", fontSize: 14, marginTop: 2 }}>
               Receipt #{receipt?.id ?? "-"}
             </div>
