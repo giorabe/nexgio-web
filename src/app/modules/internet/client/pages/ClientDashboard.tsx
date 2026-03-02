@@ -18,7 +18,7 @@ export default function ClientDashboard() {
   deviceLimit: Number(client?.tier_device_limit ?? 0),
   currentDevices: Number(client?.current_devices ?? client?.devices ?? 0),
 
-  balance: Number(client?.total_unpaid ?? 0),
+  balance: Number(client?.latest_invoice_balance_due ?? 0),
 
   // Two different due dates
   invoiceDueDate: client?.invoice_due_date ?? "",  // FROM invoices

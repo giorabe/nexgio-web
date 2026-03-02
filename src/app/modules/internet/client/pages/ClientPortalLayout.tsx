@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Toaster } from "@/app/shared/ui/sonner";
 import { Outlet, useLocation } from "react-router-dom";
 import ClientSidebar from "@/app/components/ClientSidebar";
 import { Menu, Bell } from "lucide-react";
@@ -19,6 +20,7 @@ export default function ClientPortalLayout() {
 
   return (
     <div className="flex min-h-screen bg-[#0F0F0F]">
+      <Toaster position="top-right" />
       {/* Sidebar - Desktop */}
       <div className="hidden md:block">
         <ClientSidebar />

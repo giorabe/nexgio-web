@@ -1,3 +1,92 @@
+// Improved: Deduct paid previous balances from all newer invoices' previous_balance and balance_due
+async function adjustNewerInvoicesAfterAllocation(clientId: string) {
+  // Fetch all invoices for the client, ordered by due_date
+  const { data: allInvoices, error } = await supabase
+    .from("invoices")
+    .select("id, due_date, previous_balance, balance_due, payment_status")
+    .eq("client_id", clientId)
+    .order("due_date", { ascending: true });
+
+  if (error) throw error;
+
+  // Find total paid toward previous balances (all paid invoices with previous_balance > 0)
+  let paidPrevBalance = 0;
+  for (const invoice of allInvoices) {
+    if (invoice.payment_status === "paid" && Number(invoice.previous_balance) > 0) {
+      paidPrevBalance += Number(invoice.previous_balance);
+    }
+  }
+
+  // Deduct paidPrevBalance from all invoices with previous_balance > 0
+  for (const invoice of allInvoices) {
+    if (Number(invoice.previous_balance) > 0 && paidPrevBalance > 0) {
+      const deduct = Math.min(Number(invoice.previous_balance), paidPrevBalance);
+      const newPrevBal = Number(invoice.previous_balance) - deduct;
+      const newBalDue = Number(invoice.balance_due) - deduct;
+      await supabase
+        .from("invoices")
+        .update({ previous_balance: newPrevBal, balance_due: newBalDue })
+        .eq("id", invoice.id);
+      paidPrevBalance -= deduct;
+      // Do not break early; continue to apply deduction to all invoices
+    }
+  }
+}
+// Allocates a payment to the oldest unpaid invoices for a client
+export async function allocatePaymentToInvoices(clientId: string, paymentAmount: number, paymentDate: string, paymentMethod?: string | null, notes?: string | null) {
+  // Fetch all unpaid invoices for the client, oldest first
+  const { data: invoices, error } = await supabase
+    .from("invoices")
+    .select("id, balance_due, previous_balance, due_date")
+    .eq("client_id", clientId)
+    .neq("balance_due", 0)
+    .order("due_date", { ascending: true });
+
+  if (error) throw error;
+  if (!invoices || invoices.length === 0) return;
+
+  // Identify the latest invoice (last in sorted array)
+  const latestInvoice = invoices[invoices.length - 1];
+  let remaining = paymentAmount;
+
+  // First, deduct previous balances from old invoices (excluding latest)
+  for (let i = 0; i < invoices.length - 1; i++) {
+    const invoice = invoices[i];
+    if (remaining <= 0) break;
+    const toPay = Math.min(invoice.balance_due, remaining);
+    if (toPay > 0) {
+      // Apply payment to old invoice
+      await createPayment({
+        client_id: clientId,
+        invoice_id: invoice.id,
+        payment_type: toPay === invoice.balance_due ? "full" : "partial",
+        amount: toPay,
+        payment_date: paymentDate,
+        payment_method: paymentMethod ?? null,
+        notes: notes ?? null,
+      });
+      await recomputeInvoiceFromPayments(invoice.id);
+      remaining -= toPay;
+    }
+  }
+
+  // Any remaining amount is applied to the latest invoice
+  if (remaining > 0) {
+    await createPayment({
+      client_id: clientId,
+      invoice_id: latestInvoice.id,
+      payment_type: remaining === latestInvoice.balance_due ? "full" : "partial",
+      amount: remaining,
+      payment_date: paymentDate,
+      payment_method: paymentMethod ?? null,
+      notes: notes ?? null,
+    });
+    await recomputeInvoiceFromPayments(latestInvoice.id);
+  }
+
+  // After allocation, adjust newer invoices' previous_balance and balance_due
+  await adjustNewerInvoicesAfterAllocation(clientId);
+}
 import { supabase } from "@/app/shared/supabaseClient";
 import { patchInvoicePayment } from "./invoices.service";
 
@@ -170,7 +259,7 @@ export async function sumPaymentsForInvoice(invoiceId: string) {
 export async function listPaymentsAll() {
   return supabase
     .from("payments")
-    .select(`*, clients(id,name,room,contact,email), invoices(id,invoice_number,base_price,extra_device_charge,unregistered_overcharge,rebate,previous_balance,deposit_applied,total_amount,amount_paid,balance_due,payment_status,invoice_date,due_date)`)
+    .select(`*, clients(id,name,room,contact,email), invoices(id,invoice_number,base_price,extra_device_charge,unregistered_overcharge,rebate,previous_balance,other_fee,deposit_applied,total_amount,amount_paid,balance_due,payment_status,invoice_date,due_date)`)
     .order("payment_date", { ascending: false })
     .order("created_at", { ascending: false });
 }

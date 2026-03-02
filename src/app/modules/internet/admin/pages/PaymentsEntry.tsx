@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
+// import { useLocation } from "react-router-dom";
 import { Button } from "@/app/shared/ui/button";
 import { Input } from "@/app/shared/ui/input";
 import { Label } from "@/app/shared/ui/label";
@@ -18,12 +19,15 @@ import { formatDateMMDDYYYY } from "@/app/shared/utils/dateFormat";
 import {
   createPayment,
   recomputeInvoiceFromPayments,
+  allocatePaymentToInvoices,
 } from "../services/payments.service";
+
 import { updateClient } from "../services/clients.service";
 import type { InvoiceRow } from "../types/invoice.types";
 import SuccessModal from "@/app/shared/components/modals/SuccessModal";
 
 export default function PaymentsEntry() {
+  // (Disconnected from Invoice History: no auto-select logic)
   const { clients, reload: reloadClients } = useClients();
 
   const [roomQuery, setRoomQuery] = useState("");
@@ -109,65 +113,30 @@ export default function PaymentsEntry() {
         : null;
 
       if (!invoice) {
-        if (Number(amount || 0) <= 0) return setMessage("Amount must be > 0");
-        const isoDate = toISODate(dateText);
-        if (!isoDate) return setMessage("Invalid date. Use MM-DD-YYYY");
-        const res = await createPayment({
-          client_id: selectedClientId,
-          payment_type: "advance",
-          amount: Number(amount || 0),
-          payment_date: isoDate,
-          payment_method: method,
-          notes,
-        });
-        if (res?.error) {
-          console.error("createPayment failed", res.error);
-          setMessage(res.error.message ?? "Failed to record payment");
-          return;
-        }
-        setSuccessMessage("Advance/credit recorded for client");
-        setSuccessOpen(true);
-      } else {
-        const entered = Number(amount || 0);
-        if (entered <= 0) return setMessage("Payment amount must be > 0");
-
-        const refreshed = invoices.find((i) => i.id === invoice.id) ?? invoice;
-        const balanceDueNow = Number(refreshed.balance_due ?? refreshed.total_amount ?? 0);
-        const pType = entered >= balanceDueNow ? "full" : "partial";
-
-        const isoDate = toISODate(dateText);
-        if (!isoDate) return setMessage("Invalid date. Use MM-DD-YYYY");
-
-        const res = await createPayment({
-          client_id: selectedClient!.id,
-          invoice_id: invoice.id,
-          payment_type: String(pType).trim().toLowerCase() as any,
-          amount: entered,
-          payment_date: isoDate,
-          payment_method: method,
-          notes,
-        });
-        if (res?.error) {
-          console.error("createPayment failed", res.error);
-          setMessage(res.error.message ?? "Failed to record payment");
-          return;
-        }
-
-        const recomputeRes = await recomputeInvoiceFromPayments(invoice.id);
-        if (recomputeRes?.error) {
-          const err = recomputeRes.error as any;
-          console.error("recomputeInvoiceFromPayments failed", err);
-          setMessage(err?.message || "Payment recorded but invoice recompute failed");
-          return;
-        }
-
-        setSuccessMessage(
-          entered >= balanceDueNow
-            ? "Payment recorded (may be overpayment)"
-            : "Partial payment recorded"
-        );
-        setSuccessOpen(true);
+        setMessage("Please select an invoice to pay.");
+        return;
       }
+      const entered = Number(amount || 0);
+      if (entered <= 0) return setMessage("Payment amount must be > 0");
+      const isoDate = toISODate(dateText);
+      if (!isoDate) return setMessage("Invalid date. Use MM-DD-YYYY");
+      // Only allow payment for selected invoice
+      const res = await createPayment({
+        client_id: selectedClientId,
+        invoice_id: invoice.id,
+        payment_type: paymentType,
+        amount: entered,
+        payment_date: isoDate,
+        payment_method: method,
+        notes,
+      });
+      if (res?.error) {
+        console.error("createPayment failed", res.error);
+        setMessage(res.error.message ?? "Failed to record payment");
+        return;
+      }
+      setSuccessMessage("Payment recorded for selected invoice");
+      setSuccessOpen(true);
 
       await reloadClients();
       if (selectedClientId) await loadInvoicesForClient(selectedClientId);
@@ -183,6 +152,7 @@ export default function PaymentsEntry() {
     ? invoices.find((i) => i.id === selectedInvoiceId) ?? null
     : null;
 
+  // Use only total_amount from backend (already includes other_fee)
   const totalAmount = Number(selectedInvoice?.total_amount ?? 0);
   const amountPaid = Number(selectedInvoice?.amount_paid ?? 0);
   const balanceDue = Math.max(totalAmount - amountPaid, 0);
@@ -263,25 +233,31 @@ export default function PaymentsEntry() {
                   {invoices.length === 0 && (
                     <p className="text-sm text-[#A0A0A0]">No pending invoices</p>
                   )}
-                  {invoices.map((inv) => (
-                    <button
-                      key={inv.id}
-                      onClick={() => setSelectedInvoiceId(inv.id)}
-                      className={`w-full text-left p-2 rounded-md ${
-                        selectedInvoiceId === inv.id ? "bg-[#2A2A2A]" : "bg-transparent"
-                      }`}
-                    >
-                      <div className="flex justify-between gap-3">
-                        <div className="text-white truncate">{inv.invoice_number}</div>
-                        <div className="text-[#A0A0A0] whitespace-nowrap">
-                          {formatMoney(Number(inv.balance_due ?? inv.total_amount ?? 0))}
+                  {invoices.map((inv) => {
+                    // Use only total_amount from backend (already includes other_fee)
+                    const invTotal = Number(inv.total_amount ?? 0);
+                    const invPaid = Number(inv.amount_paid ?? 0);
+                    const invBalance = Math.max(invTotal - invPaid, 0);
+                    return (
+                      <button
+                        key={inv.id}
+                        onClick={() => setSelectedInvoiceId(inv.id)}
+                        className={`w-full text-left p-2 rounded-md ${
+                          selectedInvoiceId === inv.id ? "bg-[#2A2A2A]" : "bg-transparent"
+                        }`}
+                      >
+                        <div className="flex justify-between gap-3">
+                          <div className="text-white truncate">{inv.invoice_number}</div>
+                          <div className="text-[#A0A0A0] whitespace-nowrap">
+                            {formatMoney(invBalance)}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-sm text-[#808080]">
-                        Due: {formatDateMMDDYYYY(inv.due_date)}
-                      </div>
-                    </button>
-                  ))}
+                        <div className="text-sm text-[#808080]">
+                          Due: {formatDateMMDDYYYY(inv.due_date)}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -407,6 +383,8 @@ export default function PaymentsEntry() {
           </div>
         </div>
       </div>
+
+
       <SuccessModal
         open={successOpen}
         message={successMessage}

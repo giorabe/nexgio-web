@@ -85,6 +85,7 @@ export function useInvoices() {
         paymentMethod?: string | null;
         // optional override: use caller-provided ISO due date instead of computing
         dueDate?: string;
+        otherFee?: number;
       }
     ) => {
       setLoading(true);
@@ -164,16 +165,10 @@ export function useInvoices() {
         const rebate = input.rebate ?? 0;
         const chargesSubtotal = basePrice + extraDeviceCharge + unregisteredOvercharge;
         const rebateAmount = Number(((chargesSubtotal * Number(rebate)) / 100).toFixed(2));
-        // Auto-compute previous balance if not provided by caller.
-        // computeClientPreviousBalance now returns the most recent invoice's negative balance (credit)
-        // or 0 when there's no credit.
-        const previousBalance =
-          input.previousBalance !== undefined && input.previousBalance !== null
-            ? input.previousBalance
-            : (await computeClientPreviousBalance(client.id));
+        // Previous balance is deprecated/unused
         const depositApplied = input.depositApplied ?? 0;
 
-        const totalAmount = Math.max(0, Number((chargesSubtotal - rebateAmount + previousBalance - depositApplied).toFixed(2)));
+        const totalAmount = Math.max(0, Number((chargesSubtotal - rebateAmount + (input.otherFee ?? 0) - depositApplied).toFixed(2)));
 
         // Generate invoice number (allow override from input); retry once if unique constraint fails
         // Format: NGS-YYYYMMDD-<4digits>
@@ -192,14 +187,14 @@ export function useInvoices() {
           invoiceNumber,
           billingMonth: target,
           invoiceDate: formatISODate(now),
-          // persist dueDate chosen/provided by caller or derived above
           dueDate: dueDateISO,
           basePrice,
           extraDeviceCharge,
           unregisteredOvercharge,
           rebate,
-          previousBalance,
+          previousBalance: 0, // Always 0
           depositApplied,
+          otherFee: input.otherFee ?? 0,
           totalAmount,
           paymentStatus: "pending",
           // snapshot client info

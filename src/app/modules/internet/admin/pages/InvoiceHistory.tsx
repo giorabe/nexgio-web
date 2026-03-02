@@ -53,13 +53,15 @@ interface Payment {
   dueDate: string;
   method: string;
   status: "paid" | "pending" | "overdue";
+  otherFee?: number;
   details: {
     basePrice: number;
     extraDeviceCharge: number;
     unregisteredOvercharge: number;
     rebate: number;
-    previousBalance: number;
+    // previousBalance: number; // Removed, not used
     depositApplied: number;
+    otherFee?: number;
     total: number;
   };
 }
@@ -98,12 +100,14 @@ export default function InvoiceHistory() {
 
       const mapped: Payment[] = (rows || []).map(
         (r: InvoiceRowWithClient, idx: number) => {
-          const total = Number((r as any).total_amount ?? 0);
+          const otherFee = Number((r as any).other_fee ?? 0);
+          const total = Number((r as any).total_amount ?? 0); // Use only total_amount from backend
           const paid =
             (r as any).amount_paid !== null && (r as any).amount_paid !== undefined
               ? Number((r as any).amount_paid)
-              : Math.max(0, total - Number((r as any).balance_due ?? total));
-          const balance = Number((r as any).balance_due ?? total - paid);
+              : 0;
+          // Always recalculate balance as amount - paid
+          const balance = Math.max(0, total - paid);
 
           return {
             id: idx + 1,
@@ -129,10 +133,11 @@ export default function InvoiceHistory() {
               extraDeviceCharge: Number((r as any).extra_device_charge ?? 0),
               unregisteredOvercharge: Number((r as any).unregistered_overcharge ?? 0),
               rebate: Number((r as any).rebate ?? 0),
-              previousBalance: Number((r as any).previous_balance ?? 0),
               depositApplied: Number((r as any).deposit_applied ?? 0),
+              otherFee: otherFee,
               total: total,
             },
+            otherFee: otherFee,
           };
         }
       );
@@ -172,8 +177,9 @@ export default function InvoiceHistory() {
       extraDeviceCharge: payment.details.extraDeviceCharge,
       unregisteredOvercharge: payment.details.unregisteredOvercharge,
       rebate: payment.details.rebate,
-      previousBalance: payment.details.previousBalance,
+      // previousBalance: payment.details.previousBalance, // Removed
       depositApplied: payment.details.depositApplied,
+      otherFee: payment.details.otherFee ?? payment.otherFee ?? 0,
       totalAmount: payment.details.total,
       paymentStatus: payment.status,
       paymentDate: payment.date,

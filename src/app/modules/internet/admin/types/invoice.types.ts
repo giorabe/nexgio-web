@@ -16,6 +16,7 @@ export type InvoiceRow = {
   unregistered_overcharge: number;
   rebate: number;
   previous_balance: number;
+  other_fee?: number;
   deposit_applied: number;
   total_amount: number;
   amount_paid?: number;
@@ -49,6 +50,7 @@ export type InvoiceUI = {
   unregisteredOvercharge: number;
   rebate: number;
   previousBalance: number;
+  otherFee?: number;
   depositApplied: number;
   totalAmount: number;
   amountPaid?: number;
@@ -71,6 +73,7 @@ export type InvoiceCreateInput = {
   unregisteredOvercharge?: number;
   rebate?: number;
   previousBalance?: number;
+  otherFee?: number;
   depositApplied?: number;
   totalAmount: number;
   paymentStatus?: InvoiceStatus;

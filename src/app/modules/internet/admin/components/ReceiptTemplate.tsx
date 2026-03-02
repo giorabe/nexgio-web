@@ -34,7 +34,7 @@ export default function ReceiptTemplate(props: {
   const invExtraDeviceCharge = Number(receipt?.invoices?.extra_device_charge ?? 0);
   const invUnregisteredOvercharge = Number(receipt?.invoices?.unregistered_overcharge ?? 0);
   const invRebate = Number(receipt?.invoices?.rebate ?? 0);
-  const invPreviousBalance = Number(receipt?.invoices?.previous_balance ?? 0);
+  // const invPreviousBalance = Number(receipt?.invoices?.previous_balance ?? 0); // Deprecated
   const invDepositApplied = Number(receipt?.invoices?.deposit_applied ?? 0);
   const invTotalAmount = Number(receipt?.invoices?.total_amount ?? 0);
 
@@ -134,19 +134,20 @@ export default function ReceiptTemplate(props: {
           <Row label="Base Price" value={money(invBasePrice)} />
           <Row label="Extra Device Charge" value={money(invExtraDeviceCharge)} />
           <Row label="Unregistered Overcharge" value={money(invUnregisteredOvercharge)} />
-                  {(() => {
-                    const chargesSubtotal = Number(invBasePrice + invExtraDeviceCharge + invUnregisteredOvercharge);
-                    let rebatePercent = invRebate;
-                    let rebateAmount = 0;
-                    if (rebatePercent <= 100) {
-                      rebateAmount = Number(((chargesSubtotal * rebatePercent) / 100).toFixed(2));
-                    } else {
-                      rebateAmount = rebatePercent;
-                      rebatePercent = chargesSubtotal > 0 ? Number(((rebateAmount / chargesSubtotal) * 100).toFixed(2)) : 0;
-                    }
-                    return <Row label={`Rebate (${rebatePercent}%):`} value={`- ${money(rebateAmount)}`} />;
-                  })()}
-          <Row label="Previous Balance" value={money(invPreviousBalance)} />
+          {(() => {
+            const chargesSubtotal = Number(invBasePrice + invExtraDeviceCharge + invUnregisteredOvercharge);
+            let rebatePercent = invRebate;
+            let rebateAmount = 0;
+            if (rebatePercent <= 100) {
+              rebateAmount = Number(((chargesSubtotal * rebatePercent) / 100).toFixed(2));
+            } else {
+              rebateAmount = rebatePercent;
+              rebatePercent = chargesSubtotal > 0 ? Number(((rebateAmount / chargesSubtotal) * 100).toFixed(2)) : 0;
+            }
+            return <Row label={`Rebate (${rebatePercent}%):`} value={`- ${money(rebateAmount)}`} />;
+          })()}
+          {/* Always show Other Fee as a line item, supporting both property names */}
+          <Row label="Other Fee" value={money((receipt?.invoices?.otherFee ?? receipt?.invoices?.other_fee ?? 0))} />
           <Row label="Deposit Applied" value={money(invDepositApplied)} />
           <Row label="Total Amount" value={money(invTotalAmount)} />
 

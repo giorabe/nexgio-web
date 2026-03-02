@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { User, Mail, Phone, Lock, Save } from "lucide-react";
 import { Input } from "@/app/shared/ui/input";
 import { Button } from "@/app/shared/ui/button";
@@ -33,7 +34,10 @@ export default function ClientSettings() {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client?.id) return alert("No client loaded");
+    if (!client?.id) {
+      toast.error("No client loaded", { duration: 3000, position: "top-right" });
+      return;
+    }
     setSavingProfile(true);
     try {
       const patch: any = {
@@ -41,34 +45,25 @@ export default function ClientSettings() {
         email: profileData.email,
         contact: profileData.phone,
       };
-
-      // Prefer updating by account_username (safer when id may be missing or numeric)
       const matcherField = client?.account_username ? { account_username: client.account_username } : { id: client.id };
-      console.debug("ClientSettings.update: matcher", matcherField, "patch", patch);
-
+      console.debug("[DEBUG] ClientSettings.update: matcher", matcherField, "patch", patch);
       let query = supabase.from("clients").update(patch);
       if (matcherField.account_username) query = query.eq("account_username", String(matcherField.account_username));
       else query = query.eq("id", matcherField.id);
-
-      // Use server endpoint (service role) to avoid client RLS blocking updates
-      const identifier = client?.account_username ? { account_username: client.account_username } : { id: client.id };
-      const resp = await fetch("/api/client/update-profile", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ identifier, patch }),
-      });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(json?.error || JSON.stringify(json));
-      const data = json.data;
-      if (!data) throw new Error("No row updated");
-      try {
-        setProfileData({ fullName: data.name ?? profileData.fullName, email: data.email ?? profileData.email, phone: data.contact ?? profileData.phone });
-      } catch {}
-      alert("Profile updated successfully");
+      const { data, error } = await query.select();
+      console.debug("[DEBUG] Supabase update result:", { data, error });
+      if (error) throw new Error(error.message);
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        toast.error("No row updated. Matcher used: " + JSON.stringify(matcherField), { duration: 3000, position: "top-right" });
+        return;
+      }
+      const updated = data[0];
+      setProfileData({ fullName: updated.name ?? profileData.fullName, email: updated.email ?? profileData.email, phone: updated.contact ?? profileData.phone });
+      toast.success("Profile updated successfully", { duration: 3000, position: "top-right" });
       try { reload?.(); } catch {}
     } catch (err: any) {
-      console.error("updateClient failed", err);
-      alert(err?.message ?? "Failed to update profile");
+      console.error("[DEBUG] updateClient failed", err);
+      toast.error(err?.message ?? "Failed to update profile", { duration: 3000, position: "top-right" });
     } finally {
       setSavingProfile(false);
     }
@@ -76,16 +71,17 @@ export default function ClientSettings() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client) return alert("No client loaded");
+    if (!client) {
+      toast.error("No client loaded", { duration: 3000, position: "top-right" });
+      return;
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Passwords do not match!");
+      toast.error("Passwords do not match!", { duration: 3000, position: "top-right" });
       return;
     }
 
     setChangingPassword(true);
     try {
-      const username = client.account_username ?? client.account_username_str ?? "";
-      // Call server endpoint to change password using service role key
       const identifier = client?.account_username ? { account_username: client.account_username } : { id: client.id };
       const resp = await fetch("/api/client/change-password", {
         method: "POST",
@@ -95,11 +91,11 @@ export default function ClientSettings() {
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(json?.error || JSON.stringify(json));
       if (!json.data) throw new Error("Password update failed");
-      alert("Password changed successfully");
+      toast.success("Password changed successfully!", { duration: 3000, position: "top-right" });
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err: any) {
       console.error("change password failed", err);
-      alert(err?.message ?? "Failed to change password");
+      toast.error(err?.message ?? "Failed to change password", { duration: 3000, position: "top-right" });
     } finally {
       setChangingPassword(false);
     }

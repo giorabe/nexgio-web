@@ -26,6 +26,8 @@ export function InvoiceTemplate(props: {
   };
 
   const chargesSubtotal = Number((invoice.basePrice ?? 0) + (invoice.extraDeviceCharge ?? 0) + (invoice.unregisteredOvercharge ?? 0));
+  // Other Fee (can be saved in new SQL table)
+  const otherFee = (invoice as any).otherFee ?? 0;
 
   // Backwards-compat: stored rebate may be either percent (0-100) or legacy peso amount (>100 likely an amount)
   let rebatePercent = Number(invoice.rebate ?? 0);
@@ -135,7 +137,7 @@ export function InvoiceTemplate(props: {
           <Row label="Extra Device Charge" value={money(invoice.extraDeviceCharge)} />
           <Row label="Unregistered Overcharge" value={money(invoice.unregisteredOvercharge)} />
           <Row label={`Rebate (${rebatePercent}%):`} value={`- ${money(rebateAmount)}`} />
-          <Row label="Previous Balance" value={money(invoice.previousBalance)} />
+          {Number(otherFee) > 0 && <Row label="Other Fee" value={money(otherFee)} />}
           <Row label="Deposit Applied" value={depositDisplay()} />
         </div>
 

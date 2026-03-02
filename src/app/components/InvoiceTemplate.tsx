@@ -117,7 +117,7 @@ export default function InvoiceTemplate({
               }
               return <Row label={`Rebate (${rebatePercent}%):`} value={`- ${fmtMoney(rebateAmount)}`} />;
             })()}
-            <Row label="Previous Balance" value={fmtMoney(invoice.previousBalance)} />
+            {/* <Row label="Previous Balance" value={fmtMoney(invoice.previousBalance)} /> */}
             <Row label="Deposit Applied" value={invoice.depositApplied ? `- ${fmtMoney(invoice.depositApplied)}` : fmtMoney(0)} />
           </div>
         </div>

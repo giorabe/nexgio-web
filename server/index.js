@@ -46,20 +46,36 @@ app.post("/api/client/update-profile", async (req, res) => {
 app.post("/api/client/change-password", async (req, res) => {
   try {
     const { identifier, currentPassword, newPassword } = req.body ?? {};
-    if (!identifier || !newPassword) return res.status(400).json({ error: "Missing identifier or newPassword" });
+    console.log("[DEBUG] /api/client/change-password: identifier", identifier);
+    if (!identifier || !newPassword) {
+      console.log("[DEBUG] Missing identifier or newPassword", { identifier, newPassword });
+      return res.status(400).json({ error: "Missing identifier or newPassword" });
+    }
 
     const match = identifier.account_username ? { account_username: String(identifier.account_username) } : { id: identifier.id };
+    console.log("[DEBUG] /api/client/change-password: match", match);
     const { data: existing, error: fetchErr } = await supabase.from("clients").select("id,account_password").match(match).single();
-    if (fetchErr) return res.status(500).json({ error: fetchErr.message });
-    if (!existing) return res.status(404).json({ error: "Client not found" });
+    console.log("[DEBUG] /api/client/change-password: fetched client", { existing, fetchErr });
+    if (fetchErr) {
+      console.log("[DEBUG] fetchErr", fetchErr);
+      return res.status(500).json({ error: fetchErr.message });
+    }
+    if (!existing) {
+      console.log("[DEBUG] Client not found for match", match);
+      return res.status(404).json({ error: "Client not found" });
+    }
 
-    // If a currentPassword is provided and the row has a password field, perform a basic check.
     if (currentPassword && existing.account_password && existing.account_password !== currentPassword) {
+      console.log("[DEBUG] Current password does not match", { currentPassword, account_password: existing.account_password });
       return res.status(400).json({ error: "Current password does not match" });
     }
 
     const { data, error } = await supabase.from("clients").update({ account_password: newPassword }).match({ id: existing.id }).select().single();
-    if (error) return res.status(500).json({ error: error.message });
+    console.log("[DEBUG] /api/client/change-password: update result", { data, error });
+    if (error) {
+      console.log("[DEBUG] update error", error);
+      return res.status(500).json({ error: error.message });
+    }
     return res.json({ data });
   } catch (err) {
     console.error("/api/client/change-password error", err);

@@ -2,10 +2,10 @@ import { supabase } from "@/app/shared/supabaseClient";
 import type { InvoiceRow, InvoiceCreateInput, InvoiceStatus, InvoiceRowWithClient } from "../types/invoice.types";
 import { updateClient } from "./clients.service";
 
-const SELECT_FIELDS = `id,client_id,client_name,client_room,client_contact,client_email,invoice_number,billing_month,invoice_date,due_date,base_price,extra_device_charge,unregistered_overcharge,rebate,previous_balance,deposit_applied,total_amount,amount_paid,balance_due,payment_status,payment_date,paid_at,payment_method,created_at,updated_at`;
+const SELECT_FIELDS = `id,client_id,client_name,client_room,client_contact,client_email,invoice_number,billing_month,invoice_date,due_date,base_price,extra_device_charge,unregistered_overcharge,rebate,previous_balance,other_fee,deposit_applied,total_amount,amount_paid,balance_due,payment_status,payment_date,paid_at,payment_method,created_at,updated_at`;
 
 // include client basic fields (tier_id can be used on client side to lookup tier info)
-const SELECT_FIELDS_WITH_CLIENT = `id,client_id,client_name,client_room,client_contact,client_email,invoice_number,billing_month,invoice_date,due_date,base_price,extra_device_charge,unregistered_overcharge,rebate,previous_balance,deposit_applied,total_amount,amount_paid,balance_due,payment_status,payment_date,paid_at,payment_method,created_at,updated_at,clients(name,room,contact,email,tier_id)`;
+const SELECT_FIELDS_WITH_CLIENT = `id,client_id,client_name,client_room,client_contact,client_email,invoice_number,billing_month,invoice_date,due_date,base_price,extra_device_charge,unregistered_overcharge,rebate,previous_balance,other_fee,deposit_applied,total_amount,amount_paid,balance_due,payment_status,payment_date,paid_at,payment_method,created_at,updated_at,clients(name,room,contact,email,tier_id)`;
 
 export async function fetchInvoicesByClient(clientId: string) {
   return supabase
@@ -69,7 +69,8 @@ export async function createInvoice(input: InvoiceCreateInput) {
     extra_device_charge: input.extraDeviceCharge ?? 0,
     unregistered_overcharge: input.unregisteredOvercharge ?? 0,
     rebate: input.rebate ?? 0,
-    previous_balance: input.previousBalance ?? 0,
+    previous_balance: 0, // Always 0, deprecated
+    other_fee: input.otherFee ?? 0,
     deposit_applied: input.depositApplied ?? 0,
     total_amount: input.totalAmount,
     payment_status: input.paymentStatus ?? "pending",

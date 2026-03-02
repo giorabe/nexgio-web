@@ -34,6 +34,10 @@ export default function ReceiptHistory() {
   }, []);
 
   const openReceipt = async (r: any) => {
+    // Patch invoice data to ensure otherFee is present
+    if (r?.invoices) {
+      r.invoices.otherFee = r.invoices.otherFee ?? r.invoices.other_fee ?? 0;
+    }
     setSelected(r);
 
     // compute previousPaid for this invoice/payment

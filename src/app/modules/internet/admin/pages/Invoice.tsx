@@ -90,7 +90,7 @@ export default function Invoice() {
 
   const [unregisteredOverchargeInput, setUnregisteredOverchargeInput] = useState<string>("0");
   const [rebateInput, setRebateInput] = useState<string>("0");
-  const [overridePreviousBalanceInput, setOverridePreviousBalanceInput] = useState<string | null>(null);
+  const [otherFeeInput, setOtherFeeInput] = useState<string>("0");
   const [autoPreviousBalance, setAutoPreviousBalance] = useState<number>(0);
   const [hasDeposit, setHasDeposit] = useState(false);
   const [useDepositAsPayment, setUseDepositAsPayment] = useState(false);
@@ -116,9 +116,8 @@ export default function Invoice() {
     // IMPORTANT: Do NOT auto-calculate a fallback due date. If client has no next due date, leave blank and require user action.
     if (iso) setDueDateISO(iso);
     else setDueDateISO("");
-    setOverridePreviousBalanceInput(null);
 
-    // reset auto previous balance while we fetch
+    // reset auto s while we fetch
     setAutoPreviousBalance(0);
     let mounted = true;
     void computeClientPreviousBalance(selectedClient.id)
@@ -163,7 +162,8 @@ export default function Invoice() {
     };
   })();
 
-  const previousBalance = overridePreviousBalanceInput !== null ? Number(overridePreviousBalanceInput || 0) : computed.previousBalance;
+  const previousBalance = computed.previousBalance;
+  const otherFee = Number(otherFeeInput || 0);
   const depositBalance = hasDeposit ? computed.depositBalance : 0;
 
   const unregisteredOvercharge = Number(unregisteredOverchargeInput || 0);
@@ -192,7 +192,7 @@ export default function Invoice() {
   const chargesSubtotal = computed.basePrice + computed.extraDeviceCharge + unregisteredOvercharge;
   const rebateAmount = Number(((chargesSubtotal * rebatePercent) / 100).toFixed(2));
 
-  const totalBeforeDeposit = chargesSubtotal - rebateAmount + previousBalance;
+  const totalBeforeDeposit = chargesSubtotal - rebateAmount + otherFee;
 
   useEffect(() => {
     if (!selectedClient) return;
@@ -243,6 +243,7 @@ export default function Invoice() {
         // UI/service contract uses camelCase `dueDate`
         dueDate: dueDateISO,
         previousBalance,
+        otherFee,
         depositApplied,
         paymentMethod: null,
       });
@@ -340,7 +341,7 @@ export default function Invoice() {
     const rebatePercentUI = parseRebatePercent(rebateInput || "0");
     const rebateAmountUI = Number(((chargesSubtotalUI * rebatePercentUI) / 100).toFixed(2));
 
-    const totalAmount = Math.max(0, Number((chargesSubtotalUI - rebateAmountUI + previousBalance - depositApplied).toFixed(2)));
+    const totalAmount = Math.max(0, Number((chargesSubtotalUI - rebateAmountUI + otherFee - depositApplied).toFixed(2)));
 
     return {
       id: String(savedInvoice?.id ?? ""),
@@ -355,6 +356,7 @@ export default function Invoice() {
       // store/display rebate as percent (0-100)
       rebate: rebatePercentUI,
       previousBalance,
+      otherFee,
       depositApplied,
       totalAmount,
       paymentStatus: (savedInvoice?.payment_status as any) ?? "pending",
@@ -543,9 +545,9 @@ export default function Invoice() {
               </div>
 
               <div className="flex items-center justify-between py-2 gap-3">
-                <span className="text-[#A0A0A0]">Previous Balance</span>
+                <span className="text-[#A0A0A0]">Other Fee</span>
                 <div className="flex items-center gap-2"><span className="text-[#A0A0A0]">₱</span>
-                  <Input type="number" inputMode="numeric" value={overridePreviousBalanceInput !== null ? overridePreviousBalanceInput : String(previousBalance)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOverridePreviousBalanceInput(e.target.value)} className="w-32 bg-[#161616] border-[#2A2A2A] text-white text-right" disabled={!selectedClient} />
+                  <Input type="number" inputMode="numeric" value={otherFeeInput} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtherFeeInput(e.target.value)} className="w-32 bg-[#161616] border-[#2A2A2A] text-white text-right" disabled={!selectedClient} />
                 </div>
               </div>
 
@@ -623,7 +625,7 @@ export default function Invoice() {
                 <Input type="text" inputMode="decimal" value={String(editPatch.rebate ?? 0)} onChange={(e) => setEditPatch((s:any)=>({...s, rebate: e.target.value}))} />
               </div>
               <div>
-                <Label className="text-white">Previous Balance</Label>
+                <Label className="text-white">Other Fee</Label>
                 <Input type="number" value={String(editPatch.previous_balance ?? 0)} onChange={(e) => setEditPatch((s:any)=>({...s, previous_balance: Number(e.target.value)}))} />
               </div>
             </div>
