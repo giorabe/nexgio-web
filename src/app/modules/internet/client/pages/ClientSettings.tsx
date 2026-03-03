@@ -83,19 +83,33 @@ export default function ClientSettings() {
     setChangingPassword(true);
     try {
       const identifier = client?.account_username ? { account_username: client.account_username } : { id: client.id };
+      const payload = { identifier, currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword };
+      console.debug("[DEBUG] Sending password change request:", payload);
       const resp = await fetch("/api/client/change-password", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ identifier, currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword }),
+        body: JSON.stringify(payload),
       });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(json?.error || JSON.stringify(json));
-      if (!json.data) throw new Error("Password update failed");
+      let json: { error?: string; data?: any } = {};
+      try {
+        json = await resp.json();
+      } catch (parseErr) {
+        console.error("[DEBUG] Failed to parse JSON response", parseErr);
+      }
+      console.debug("[DEBUG] Password change response:", resp.status, json);
+      if (!resp.ok) {
+        toast.error("Password change failed: " + (json.error ?? resp.status), { duration: 4000, position: "top-right" });
+        throw new Error(json.error ?? JSON.stringify(json));
+      }
+      if (!json.data) {
+        toast.error("Password update failed: No data returned", { duration: 4000, position: "top-right" });
+        throw new Error("Password update failed");
+      }
       toast.success("Password changed successfully!", { duration: 3000, position: "top-right" });
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err: any) {
-      console.error("change password failed", err);
-      toast.error(err?.message ?? "Failed to change password", { duration: 3000, position: "top-right" });
+      console.error("[DEBUG] change password failed", err);
+      toast.error(err?.message ?? "Failed to change password", { duration: 4000, position: "top-right" });
     } finally {
       setChangingPassword(false);
     }

@@ -45,6 +45,7 @@ app.post("/api/client/update-profile", async (req, res) => {
 
 app.post("/api/client/change-password", async (req, res) => {
   try {
+    console.log("[DEBUG] /api/client/change-password: req.body", req.body);
     const { identifier, currentPassword, newPassword } = req.body ?? {};
     console.log("[DEBUG] /api/client/change-password: identifier", identifier);
     if (!identifier || !newPassword) {
