@@ -22,7 +22,6 @@ const navItems: NavItem[] = [
   { label: "Dashboard", path: "/client/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
   { label: "Invoice History", path: "/client/invoices", icon: <FileText className="w-5 h-5" /> },
   { label: "Receipt History", path: "/client/receipts", icon: <Receipt className="w-5 h-5" /> },
-  { label: "Internet Details", path: "/client/service-info", icon: <Wifi className="w-5 h-5" /> },
   { label: "Settings", path: "/client/settings", icon: <Settings className="w-5 h-5" /> },
 ];
 

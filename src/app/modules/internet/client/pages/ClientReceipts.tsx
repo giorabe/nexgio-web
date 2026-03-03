@@ -345,16 +345,7 @@ export default function ClientReceipts() {
                       ₱{receipt.amount.toLocaleString()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openReceipt(receipt)}>
-                        <Eye className="w-4 h-4 mr-2" />
-                        View
-                      </Button>
-                    <Button variant="outline" size="sm" onClick={() => downloadReceiptFor(receipt)}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
+                  {/* View button removed */}
                 </div>
               </div>
             </div>
@@ -362,70 +353,7 @@ export default function ClientReceipts() {
         </div>
       </div>
 
-      {/* Controlled dialog that shows the receipt preview using admin template */}
-      <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <DialogContent
-          className="
-            bg-[#1E1E1E] border-[#2A2A2A] text-white
-            w-[95vw] max-w-[980px]
-            max-h-[92vh]
-            overflow-hidden
-          "
-        >
-          <DialogHeader>
-            <DialogTitle>
-              Receipt #{selected?.id ?? selected?.receipt_number ?? selected?.invoices?.invoice_number ?? "-"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>
-            {selected && (
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <div
-                    style={{
-                      width: 720,
-                      height: "100%",
-                      background: "#222",
-                      borderRadius: 16,
-                      boxShadow: "0 0 24px #0004",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "auto",
-                      padding: 24,
-                    }}
-                  >
-                    <ReceiptTemplate
-                      receipt={selected}
-                      clientName={client?.name}
-                      clientRoom={client?.room}
-                      clientContact={client?.contact}
-                      clientEmail={client?.email}
-                      previousPaid={previousPaid}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2 mt-4">
-            <Button
-              onClick={async () => {
-                await downloadReceipt();
-              }}
-              className="bg-[#10B981] text-white"
-            >
-              Save as Image
-            </Button>
-
-            <Button variant="outline" onClick={() => setSelected(null)}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Dialog removed */}
 
       {/* Results Info */}
       <div className="flex items-center justify-between text-[#A0A0A0] text-sm">

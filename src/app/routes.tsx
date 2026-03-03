@@ -20,7 +20,6 @@ import ClientPortalLayout from "./modules/internet/client/pages/ClientPortalLayo
 import ClientDashboard from "./modules/internet/client/pages/ClientDashboard";
 import ClientInvoices from "./modules/internet/client/pages/ClientInvoices";
 import ClientReceipts from "./modules/internet/client/pages/ClientReceipts";
-import ClientServiceInfo from "./modules/internet/client/pages/ClientServiceInfo";
 import ClientSettings from "./modules/internet/client/pages/ClientSettings";
 import ClientLogin from "./modules/internet/client/pages/ClientLogin";
 import ClientServiceSelector from "./modules/internet/client/pages/ClientServiceSelector";
@@ -64,7 +63,6 @@ export const router = createBrowserRouter([
       { path: "dashboard", element: <ClientDashboard /> },
       { path: "invoices", element: <ClientInvoices /> },
       { path: "receipts", element: <ClientReceipts /> },
-      { path: "service-info", element: <ClientServiceInfo /> },
       { path: "settings", element: <ClientSettings /> },
     ],
   },
