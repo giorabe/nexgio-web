@@ -16,7 +16,6 @@ export default function ClientSettings() {
   });
 
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
@@ -83,7 +82,7 @@ export default function ClientSettings() {
     setChangingPassword(true);
     try {
       const identifier = client?.account_username ? { account_username: client.account_username } : { id: client.id };
-      const payload = { identifier, currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword };
+      const payload = { identifier, newPassword: passwordData.newPassword };
       console.debug("[DEBUG] Sending password change request:", payload);
       const resp = await fetch("/api/client/change-password", {
         method: "POST",
@@ -106,7 +105,7 @@ export default function ClientSettings() {
         throw new Error("Password update failed");
       }
       toast.success("Password changed successfully!", { duration: 3000, position: "top-right" });
-      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordData({ newPassword: "", confirmPassword: "" });
     } catch (err: any) {
       console.error("[DEBUG] change password failed", err);
       toast.error(err?.message ?? "Failed to change password", { duration: 4000, position: "top-right" });
@@ -193,26 +192,12 @@ export default function ClientSettings() {
             <Lock className="w-6 h-6 text-[#F5C400]" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Change Password</h2>
-            <p className="text-[#A0A0A0] text-sm">Update your account password</p>
+            <h2 className="text-xl font-bold text-white">Edit Password</h2>
+            <p className="text-[#A0A0A0] text-sm">Directly edit your account password</p>
           </div>
         </div>
 
         <form onSubmit={handlePasswordChange} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="currentPassword" className="text-sm font-medium text-white">
-              Current Password
-            </label>
-            <Input
-              id="currentPassword"
-              type="password"
-              value={passwordData.currentPassword}
-              onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-              className="bg-[#161616] border-[#2A2A2A] text-white focus:border-[#F5C400]"
-              required
-            />
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label htmlFor="newPassword" className="text-sm font-medium text-white">
@@ -245,7 +230,7 @@ export default function ClientSettings() {
 
           <div className="flex justify-end pt-4">
             <Button type="submit" className="bg-[#F5C400] hover:bg-[#F5C400]/90 text-[#0F0F0F]" disabled={changingPassword}>
-              {changingPassword ? "Updating..." : "Update Password"}
+              {changingPassword ? "Updating..." : "Edit Password"}
             </Button>
           </div>
         </form>
