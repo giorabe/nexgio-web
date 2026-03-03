@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useClientPortal } from "@/app/modules/internet/client/hooks/useClientPortal";
 import ReceiptTemplate, { exportReceiptToPng } from "@/app/modules/internet/admin/components/ReceiptTemplate";
 import { sumPreviousPaid } from "@/app/modules/internet/admin/services/payments.service";
+import { fetchInvoiceById, fetchInvoiceByNumber } from "@/app/modules/internet/admin/services/invoices.service";
 
 export default function ClientReceipts() {
   const { client, payments = [], loading: portalLoading } = useClientPortal();
@@ -33,13 +34,77 @@ export default function ClientReceipts() {
   const paymentMethods = Array.from(new Set(receipts.map((r: any) => r.payment_method ?? ""))).filter(Boolean);
 
   const openReceipt = async (r: any) => {
-    setSelected(r);
+    // clone to avoid mutating source array
+    const receiptCopy = { ...(r || {}) } as any;
+    console.debug("ClientReceipts.openReceipt: incoming receipt", receiptCopy);
+    // If receipt contains invoices as JSON string, parse it
+    if (typeof receiptCopy.invoices === "string") {
+      try {
+        receiptCopy.invoices = JSON.parse(receiptCopy.invoices);
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
+    // If this payment references an invoice, fetch the invoice row and attach it
+    // helper to normalize invoice object to admin shape (snake_case)
+    const normalizeInv = (inv: any) => {
+      if (!inv) return inv;
+      const out: any = { ...(inv as any) };
+      // map camelCase -> snake_case expected by template
+      out.base_price = out.base_price ?? out.basePrice ?? out.base_price_amount ?? 0;
+      out.extra_device_charge = out.extra_device_charge ?? out.extraDeviceCharge ?? out.extra_device_charge ?? 0;
+      out.unregistered_overcharge = out.unregistered_overcharge ?? out.unregisteredOvercharge ?? 0;
+      out.rebate = out.rebate ?? out.rebatePercent ?? out.rebate_amount ?? 0;
+      out.other_fee = out.other_fee ?? out.otherFee ?? 0;
+      out.deposit_applied = out.deposit_applied ?? out.depositApplied ?? 0;
+      out.total_amount = out.total_amount ?? out.totalAmount ?? out.total ?? 0;
+      out.amount_paid = out.amount_paid ?? out.amountPaid ?? out.amount_paid ?? 0;
+      out.balance_due = out.balance_due ?? out.balanceDue ?? Math.max(0, (out.total_amount ?? 0) - (out.amount_paid ?? 0));
+      return out;
+    };
+
+    if (receiptCopy?.invoices) {
+      // normalize embedded invoice if present
+      receiptCopy.invoices = normalizeInv(receiptCopy.invoices);
+    }
+
+    // If invoice_id missing but invoice number/string is present, try fetch by number
+    const invoiceNumberFromReceipt = receiptCopy.invoices?.invoice_number ?? receiptCopy.invoice_number ?? receiptCopy.invoiceNumber ?? receiptCopy.invoiceId ?? null;
+    if (!receiptCopy?.invoice_id && invoiceNumberFromReceipt) {
+      try {
+        const { data: invByNum, error: invNumErr } = await fetchInvoiceByNumber(String(invoiceNumberFromReceipt));
+        if (!invNumErr && invByNum) {
+          receiptCopy.invoices = normalizeInv(invByNum);
+          (receiptCopy.invoices as any).otherFee = (receiptCopy.invoices as any).otherFee ?? (receiptCopy.invoices as any).other_fee ?? 0;
+          console.debug("ClientReceipts.openReceipt: fetched invoice by number", invoiceNumberFromReceipt, receiptCopy.invoices);
+        }
+      } catch (e) {
+        console.error("openReceipt.fetchInvoiceByNumber", e);
+      }
+    }
+
+    if (receiptCopy?.invoice_id) {
+      try {
+        const { data: inv, error: invErr } = await fetchInvoiceById(String(receiptCopy.invoice_id));
+        if (!invErr && inv) {
+          // ensure otherFee field exists (admin code expects either otherFee or other_fee)
+          const norm = normalizeInv(inv);
+          // keep both camelCase and snake_case to be safe
+          (norm as any).otherFee = (norm as any).otherFee ?? (norm as any).other_fee ?? 0;
+          receiptCopy.invoices = norm;
+          console.debug("ClientReceipts.openReceipt: attached invoice", norm);
+        }
+      } catch (e) {
+        console.error("openReceipt.fetchInvoiceById", e);
+      }
+    }
+    setSelected(receiptCopy);
     try {
-      if (r?.invoice_id) {
-        const { sum, error } = await sumPreviousPaid(String(r.invoice_id), {
-          id: r.id,
-          payment_date: r.payment_date ?? null,
-          created_at: r.created_at ?? null,
+      if (receiptCopy?.invoice_id) {
+        const { sum, error } = await sumPreviousPaid(String(receiptCopy.invoice_id), {
+          id: receiptCopy.id,
+          payment_date: receiptCopy.payment_date ?? null,
+          created_at: receiptCopy.created_at ?? null,
         } as any);
         if (!error) setPreviousPaid(Number(sum ?? 0));
         else setPreviousPaid(0);
@@ -68,6 +133,86 @@ export default function ClientReceipts() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `receipt-${selected?.id ?? "unknown"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("exportReceipt failed", err);
+      alert("Failed to export receipt image.");
+    }
+  };
+
+  // Download directly for a given receipt (used from the list where `selected` isn't set yet)
+  const downloadReceiptFor = async (r: any) => {
+    if (!r) return;
+    const receiptCopy = { ...(r || {}) } as any;
+    // parse embedded invoice JSON if present
+    if (typeof receiptCopy.invoices === "string") {
+      try {
+        receiptCopy.invoices = JSON.parse(receiptCopy.invoices);
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const normalizeInv = (inv: any) => {
+      if (!inv) return inv;
+      const out: any = { ...(inv as any) };
+      out.base_price = out.base_price ?? out.basePrice ?? out.base_price_amount ?? 0;
+      out.extra_device_charge = out.extra_device_charge ?? out.extraDeviceCharge ?? 0;
+      out.unregistered_overcharge = out.unregistered_overcharge ?? out.unregisteredOvercharge ?? 0;
+      out.rebate = out.rebate ?? out.rebatePercent ?? out.rebate_amount ?? 0;
+      out.other_fee = out.other_fee ?? out.otherFee ?? 0;
+      out.deposit_applied = out.deposit_applied ?? out.depositApplied ?? 0;
+      out.total_amount = out.total_amount ?? out.totalAmount ?? out.total ?? 0;
+      out.amount_paid = out.amount_paid ?? out.amountPaid ?? 0;
+      out.balance_due = out.balance_due ?? out.balanceDue ?? Math.max(0, (out.total_amount ?? 0) - (out.amount_paid ?? 0));
+      return out;
+    };
+
+    // try to ensure we have invoice details
+    if (receiptCopy?.invoice_id && !receiptCopy.invoices) {
+      try {
+        const { data: inv, error: invErr } = await fetchInvoiceById(String(receiptCopy.invoice_id));
+        if (!invErr && inv) {
+          receiptCopy.invoices = normalizeInv(inv);
+        }
+      } catch (e) {
+        console.error("downloadReceiptFor.fetchInvoiceById", e);
+      }
+    }
+
+    if (receiptCopy?.invoices) receiptCopy.invoices = normalizeInv(receiptCopy.invoices);
+
+    let prev = 0;
+    try {
+      if (receiptCopy?.invoice_id) {
+        const { sum, error } = await sumPreviousPaid(String(receiptCopy.invoice_id), {
+          id: receiptCopy.id,
+          payment_date: receiptCopy.payment_date ?? null,
+          created_at: receiptCopy.created_at ?? null,
+        } as any);
+        if (!error) prev = Number(sum ?? 0);
+      }
+    } catch (e) {
+      console.error("downloadReceiptFor.sumPreviousPaid", e);
+    }
+
+    try {
+      const blob = await exportReceiptToPng(
+        receiptCopy,
+        client?.name ?? client?.full_name ?? "",
+        client?.room ?? client?.room_number ?? "",
+        client?.contact ?? "",
+        client?.email ?? "",
+        prev
+      );
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `receipt-${receiptCopy?.id ?? "unknown"}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -196,7 +341,7 @@ export default function ClientReceipts() {
                         <Eye className="w-4 h-4 mr-2" />
                         View
                       </Button>
-                    <Button variant="outline" size="sm" onClick={() => { setSelected(receipt); downloadReceipt(); }}>
+                    <Button variant="outline" size="sm" onClick={() => downloadReceiptFor(receipt)}>
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>

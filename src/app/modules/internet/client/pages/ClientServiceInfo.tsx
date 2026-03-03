@@ -55,14 +55,14 @@ function resolveClientTier(client: any, tiers: any[] = []) {
 }
 
 export default function ClientServiceInfo() {
-  const { tiers, loading: tiersLoading } = useTiers();
+  const { tiers, loading: tiersLoading, error: tiersError } = useTiers();
   const { client } = useClientPortal();
 
   // Debug: surface tiers loading/state to help diagnose empty list
   // Remove or reduce verbosity once verified in the browser console
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.debug("ClientServiceInfo: tiers, loading", { tiers, tiersLoading });
+    console.debug("ClientServiceInfo: tiers, loading, error", { tiers, tiersLoading, tiersError });
   }
 
   // Map admin `tiers` to the UI shape used here

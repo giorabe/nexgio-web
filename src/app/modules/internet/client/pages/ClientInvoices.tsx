@@ -13,6 +13,8 @@ interface Invoice {
   id: string;
   period: string;
   amount: number;
+  amountPaid?: number;
+  balance?: number;
   date?: string | null;
   dueDate?: string | null;
   status: "paid" | "pending" | "overdue";
@@ -48,14 +50,20 @@ function mapRowToListItem(row: DbInvoiceRow): Invoice {
   const id = row.invoice_number ?? row.id ?? "";
   const period = formatBillingMonth(row.billing_month, row.invoice_date);
   const amount = Number(row.total_amount ?? row.totalAmount ?? row.amount ?? 0);
+  const amountPaid = Number((row.amount_paid ?? row.amountPaid ?? 0) || 0);
+  const balance = Math.max(0, amount - amountPaid);
   const date = row.invoice_date ?? row.date ?? null;
   const dueDate = row.due_date ?? row.dueDate ?? null;
   let status = (row.payment_status ?? row.paymentStatus ?? "pending") as string;
-  if (status !== "paid" && isOverdue(row)) status = "overdue";
+  // determine paid/overdue based on computed balance and due date
+  if (balance <= 0) status = "paid";
+  else if (status !== "paid" && isOverdue(row)) status = "overdue";
   return {
     id,
     period,
     amount,
+    amountPaid,
+    balance,
     date,
     dueDate,
     status: status as any,
@@ -72,6 +80,9 @@ function mapRowToInvoiceUI(row: DbInvoiceRow) {
   const previousBalance = Number(row.previous_balance ?? 0);
   const depositApplied = Number(row.deposit_applied ?? 0);
   const totalAmount = Number(row.total_amount ?? row.totalAmount ?? 0);
+  const otherFee = Number(row.other_fee ?? row.otherFee ?? 0);
+  const amountPaid = Number(row.amount_paid ?? row.amountPaid ?? 0);
+  const balanceDue = Number(row.balance_due ?? row.balanceDue ?? Math.max(0, totalAmount - amountPaid));
 
   return {
     invoiceNumber: row.invoice_number ?? row.id ?? "",
@@ -81,10 +92,13 @@ function mapRowToInvoiceUI(row: DbInvoiceRow) {
     basePrice,
     extraDeviceCharge,
     unregisteredOvercharge,
-    rebate: { percent: rebatePercent, amount: rebateAmount },
+    rebate: rebatePercent,
     previousBalance,
+    otherFee,
     depositApplied,
     totalAmount,
+    amountPaid,
+    balanceDue,
     paymentStatus: row.payment_status ?? row.paymentStatus,
     paymentMethod: row.payment_method ?? row.paymentMethod,
     __raw: row,
@@ -110,9 +124,8 @@ export default function ClientInvoices() {
     return matchesSearch && matchesStatus;
   });
 
-  const totalPaid = invoices
-    .filter((i) => i.status === "paid")
-    .reduce((sum, i) => sum + i.amount, 0);
+  const totalPaid = invoices.reduce((sum, i) => sum + Number(i.amountPaid ?? 0), 0);
+  const totalPaidCount = invoices.filter((i) => Number(i.amountPaid ?? 0) > 0).length;
   const totalPending = invoices
     .filter((i) => i.status === "pending")
     .reduce((sum, i) => sum + i.amount, 0);
@@ -297,6 +310,10 @@ export default function ClientInvoices() {
                     <p className="text-2xl font-bold text-white">
                       ₱{invoice.amount.toLocaleString()}
                     </p>
+                    <div className="text-sm text-[#A0A0A0] mt-1">
+                      <div>Paid: <span className="text-white font-semibold">₱{(invoice.amountPaid ?? 0).toLocaleString()}</span></div>
+                      <div>Balance: <span className="text-white font-semibold">₱{(invoice.balance ?? invoice.amount).toLocaleString()}</span></div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Dialog>
@@ -318,6 +335,8 @@ export default function ClientInvoices() {
                               const invoiceUI = mapRowToInvoiceUI(raw);
                               return (
                                 <div className="bg-[#0F0F0F] p-4 rounded">
+                                  {/* Debug: show mapped otherFee for troubleshooting */}
+                                  <div className="text-sm text-[#A0A0A0] mb-2">Mapped Other Fee: <span className="text-white">₱{(invoiceUI.otherFee ?? 0).toLocaleString()}</span></div>
                                   <InvoiceTemplate
                                     invoice={invoiceUI}
                                     clientName={client?.name}
@@ -325,6 +344,7 @@ export default function ClientInvoices() {
                                     clientContact={client?.contact}
                                     clientEmail={client?.email}
                                   />
+                                  {console.debug("ClientInvoices: invoiceUI", invoiceUI)}
                                 </div>
                               );
                             })()}
@@ -335,7 +355,7 @@ export default function ClientInvoices() {
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
-                    {invoice.status === "pending" && (
+                    {(invoice.status === "pending" || invoice.status === "overdue") && (
                       <Button 
                         size="sm" 
                         className="bg-[#F5C400] hover:bg-[#F5C400]/90 text-[#0F0F0F]"

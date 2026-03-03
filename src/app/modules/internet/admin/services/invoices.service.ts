@@ -58,6 +58,18 @@ export async function fetchInvoiceById(invoiceId: string) {
   return { data, error };
 }
 
+export async function fetchInvoiceByNumber(invoiceNumber: string) {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(SELECT_FIELDS)
+    .eq("invoice_number", invoiceNumber)
+    .limit(1)
+    .single()
+    .returns<any>();
+
+  return { data, error };
+}
+
 export async function createInvoice(input: InvoiceCreateInput) {
   const insertRow: Record<string, unknown> = {
     client_id: input.clientId,
