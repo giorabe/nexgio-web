@@ -66,10 +66,7 @@ app.post("/api/client/change-password", async (req, res) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    if (currentPassword && existing.account_password && existing.account_password !== currentPassword) {
-      console.log("[DEBUG] Current password does not match", { currentPassword, account_password: existing.account_password });
-      return res.status(400).json({ error: "Current password does not match" });
-    }
+    // Removed current password matching for simple edit mode
 
     const { data, error } = await supabase.from("clients").update({ account_password: newPassword }).match({ id: existing.id }).select().single();
     console.log("[DEBUG] /api/client/change-password: update result", { data, error });
