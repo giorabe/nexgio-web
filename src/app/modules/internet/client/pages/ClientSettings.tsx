@@ -185,7 +185,8 @@ export default function ClientSettings() {
         </form>
       </div>
 
-      {/* Change Password */}
+      {/*
+      Change Password section hidden for now
       <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-lg bg-[#F5C400]/10 flex items-center justify-center">
@@ -235,6 +236,7 @@ export default function ClientSettings() {
           </div>
         </form>
       </div>
+      */}
     </div>
   );
 }

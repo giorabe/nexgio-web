@@ -123,18 +123,6 @@ export default function ClientSidebar({ onClose }: ClientSidebarProps) {
             ))}
           </ul>
         </nav>
-        {/* Support Banner */}
-        <div className="p-4 mx-4 mb-4 bg-gradient-to-br from-[#F5C400]/10 to-[#F5C400]/5 border border-[#F5C400]/20 rounded-lg">
-          <p className="text-xs font-semibold text-[#F5C400] mb-1">Need Help?</p>
-          <p className="text-xs text-[#A0A0A0] mb-3">Contact our support team</p>
-          <button
-            className="w-full px-3 py-2 bg-[#F5C400] hover:bg-[#F5C400]/90 text-[#0F0F0F] text-xs font-semibold rounded-lg transition-colors"
-            aria-label="Get support"
-            title="Get support"
-          >
-            Get Support
-          </button>
-        </div>
       </div>
 
       {/* Logout - sticks to bottom */}

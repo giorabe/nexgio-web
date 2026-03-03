@@ -414,7 +414,7 @@ export default function ClientInvoices() {
               <div className="space-y-3">
                 <p className="font-semibold text-white">Select Payment Method</p>
                 <div className="grid grid-cols-2 gap-3">
-                  {["GCash", "PayMaya", "Bank Transfer", "Cash"].map((method) => (
+                  {["GCash", "Cash"].map((method) => (
                     <button
                       key={method}
                       onClick={() => setSelectedPaymentMethod(method)}
@@ -429,15 +429,22 @@ export default function ClientInvoices() {
                     </button>
                   ))}
                 </div>
+                {/* Payment instructions for selected method */}
+                {selectedPaymentMethod === "GCash" && (
+                  <div className="mt-4 p-4 bg-[#0F0F0F] rounded border border-[#2A2A2A]">
+                    <p className="text-[#A0A0A0] text-sm mb-1">Send payment to:</p>
+                    <div className="text-white font-semibold text-lg">Account Number: 09366665212</div>
+                    <div className="text-white font-semibold text-lg">Account Name: Jorge R.</div>
+                  </div>
+                )}
+                {selectedPaymentMethod === "Cash" && (
+                  <div className="mt-4 p-4 bg-[#0F0F0F] rounded border border-[#2A2A2A]">
+                    <p className="text-[#A0A0A0] text-sm mb-1">For cash payments:</p>
+                    <div className="text-white font-semibold text-lg">Please visit Room 4 or contact the admin first.</div>
+                  </div>
+                )}
               </div>
 
-              <Button
-                onClick={processPayment}
-                disabled={!selectedPaymentMethod}
-                className="w-full h-12 bg-[#F5C400] hover:bg-[#F5C400]/90 text-[#0F0F0F] font-semibold disabled:opacity-50"
-              >
-                Proceed to Payment
-              </Button>
             </div>
           )}
         </DialogContent>
