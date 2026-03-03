@@ -9,21 +9,22 @@ export default function ClientDashboard() {
   console.log("CLIENT OBJECT:", client);
 
   const clientData = {
-  name: client?.name ?? client?.room ?? "Client",
-  accountId: client?.account_username ?? client?.id ?? "#unknown",
-  status: client?.status ?? "active",
+    name: client?.name ?? client?.room ?? "Client",
+    accountId: client?.account_username ?? client?.id ?? "#unknown",
+    status: client?.status ?? "active",
 
-  tier: client?.tier_name ?? "Plan",
-  speed: client?.tier_speed ?? "-",
-  deviceLimit: Number(client?.tier_device_limit ?? 0),
-  currentDevices: Number(client?.current_devices ?? client?.devices ?? 0),
+    tier: client?.tier_name ?? "Plan",
+    speed: client?.tier_speed ?? "-",
+    deviceLimit: Number(client?.tier_device_limit ?? 0),
+    currentDevices: Number(client?.current_devices ?? client?.devices ?? 0),
 
-  balance: Number(client?.latest_invoice_balance_due ?? 0),
+    // Use total_unpaid for current balance
+    balance: Number(client?.total_unpaid ?? 0),
 
-  // Two different due dates
-  invoiceDueDate: client?.invoice_due_date ?? "",  // FROM invoices
-  nextDueDate: client?.next_due_date ?? "",        // FROM clients
-};
+    // Two different due dates
+    invoiceDueDate: client?.invoice_due_date ?? "",  // FROM invoices
+    nextDueDate: client?.next_due_date ?? "",        // FROM clients
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-400">{error}</div>;

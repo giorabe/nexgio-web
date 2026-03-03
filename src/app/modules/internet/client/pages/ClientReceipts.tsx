@@ -10,13 +10,22 @@ import { sumPreviousPaid } from "@/app/modules/internet/admin/services/payments.
 import { fetchInvoiceById, fetchInvoiceByNumber } from "@/app/modules/internet/admin/services/invoices.service";
 
 export default function ClientReceipts() {
-  const { client, payments = [], loading: portalLoading } = useClientPortal();
+  const { client, payments = [], invoices: portalInvoices = [], loading: portalLoading } = useClientPortal();
   const [searchTerm, setSearchTerm] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
   const [selected, setSelected] = useState<any | null>(null);
   const [previousPaid, setPreviousPaid] = useState<number>(0);
 
   const receipts = Array.isArray(payments) ? payments : [];
+
+  // build a quick lookup from portal invoices so we can display the human-friendly invoice number
+  const invoiceLookup = new Map<string, any>();
+  if (Array.isArray(portalInvoices)) {
+    for (const inv of portalInvoices) {
+      const key = String(inv.id ?? inv.invoice_number ?? inv.invoiceNumber ?? "");
+      if (key) invoiceLookup.set(key, inv);
+    }
+  }
 
   const filteredReceipts = receipts.filter((receipt: any) => {
     const id = String(receipt.id ?? "");
@@ -308,7 +317,7 @@ export default function ClientReceipts() {
                     </span>
                   </div>
                   <div>
-                    <p className="text-white font-medium text-lg mb-1">{String(receipt.invoices?.invoice_number ?? receipt.invoice_id ?? "-")}</p>
+                    {/* Primary title shows receipt id; invoice shown in metadata below, so remove the secondary invoice line */}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-[#A0A0A0]">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
@@ -325,7 +334,7 @@ export default function ClientReceipts() {
                         <span>{receipt.payment_method ?? "-"}</span>
                       </div>
                       <div>
-                        Invoice: <span className="font-mono text-[#F5C400]">{String(receipt.invoices?.invoice_number ?? receipt.invoice_id ?? "-")}</span>
+                        Invoice: <span className="font-mono text-[#F5C400]">{String(receipt.invoices?.invoice_number ?? receipt.invoice_number ?? invoiceLookup.get(String(receipt.invoice_id ?? ""))?.invoice_number ?? receipt.invoice_id ?? "-")}</span>
                       </div>
                     </div>
                   </div>
@@ -364,7 +373,9 @@ export default function ClientReceipts() {
           "
         >
           <DialogHeader>
-            <DialogTitle>Receipt {selected?.invoices?.invoice_number ?? (selected?.id ?? "")}</DialogTitle>
+            <DialogTitle>
+              Receipt #{selected?.id ?? selected?.receipt_number ?? selected?.invoices?.invoice_number ?? "-"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>

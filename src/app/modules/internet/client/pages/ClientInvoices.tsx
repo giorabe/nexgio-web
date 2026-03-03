@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Search, Download, Eye, CreditCard, Calendar } from "lucide-react";
+import { Search, Download, Eye, CreditCard, Calendar, X } from "lucide-react";
 import { Input } from "@/app/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/shared/ui/select";
 import { Button } from "@/app/shared/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/app/shared/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from "@/app/shared/ui/dialog";
 import StatusBadge from "@/app/components/StatusBadge";
 import { fetchInvoicesByClient } from "@/app/modules/internet/admin/services/invoices.service";
 import { useClientPortal } from "../hooks/useClientPortal";
@@ -317,7 +317,7 @@ export default function ClientInvoices() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Dialog>
-                      <DialogTrigger asChild>
+                        <DialogTrigger asChild>
                         <Button variant="outline" size="sm">
                           <Eye className="w-4 h-4 mr-2" />
                           View
@@ -327,28 +327,45 @@ export default function ClientInvoices() {
                           <DialogHeader>
                             <DialogTitle className="text-2xl">Invoice Details</DialogTitle>
                           </DialogHeader>
+                          {/* Close icon in top-right */}
+                          <DialogClose asChild>
+                            <button aria-label="Close" title="Close" className="absolute right-4 top-4 p-2 rounded hover:bg-white/5 text-[#A0A0A0]">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </DialogClose>
                           <div className="py-4">
                             {/* Render the shared InvoiceTemplate so view matches exported PNG */}
                             {(() => {
                               const raw = rawInvoices.find((r) => (r.invoice_number ?? r.id) === invoice.id);
                               if (!raw) return <p className="text-sm text-[#A0A0A0]">Invoice data not available.</p>;
                               const invoiceUI = mapRowToInvoiceUI(raw);
+                              console.debug("ClientInvoices: invoiceUI", invoiceUI);
                               return (
                                 <div className="bg-[#0F0F0F] p-4 rounded">
-                                  {/* Debug: show mapped otherFee for troubleshooting */}
-                                  <div className="text-sm text-[#A0A0A0] mb-2">Mapped Other Fee: <span className="text-white">₱{(invoiceUI.otherFee ?? 0).toLocaleString()}</span></div>
-                                  <InvoiceTemplate
-                                    invoice={invoiceUI}
-                                    clientName={client?.name}
-                                    clientRoom={client?.room}
-                                    clientContact={client?.contact}
-                                    clientEmail={client?.email}
-                                  />
-                                  {console.debug("ClientInvoices: invoiceUI", invoiceUI)}
+                                  <div className="max-h-[60vh] overflow-auto">
+                                    <InvoiceTemplate
+                                      invoice={invoiceUI}
+                                      clientName={client?.name}
+                                      clientRoom={client?.room}
+                                      clientContact={client?.contact}
+                                      clientEmail={client?.email}
+                                    />
+                                  </div>
                                 </div>
                               );
                             })()}
                           </div>
+                          <DialogFooter>
+                            <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => handleDownload(invoice)}>
+                              <Download className="w-4 h-4 mr-2" />
+                              Save as Image
+                            </Button>
+                            <DialogClose asChild>
+                              <Button variant="ghost" size="sm">
+                                Close
+                              </Button>
+                            </DialogClose>
+                          </DialogFooter>
                         </DialogContent>
                     </Dialog>
                     <Button variant="outline" size="sm" onClick={() => handleDownload(invoice)}>

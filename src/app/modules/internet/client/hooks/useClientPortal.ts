@@ -49,6 +49,7 @@ export function useClientPortal() {
     setError(null);
     try {
       const identifier = getStoredIdentifier();
+      console.debug("[useClientPortal] identifier:", identifier);
       lastIdentifierRef.current = identifier;
       if (!identifier) {
         setClient(null);
@@ -63,6 +64,7 @@ export function useClientPortal() {
         .select("*")
         .or(`account_username.eq.${identifier},id.eq.${identifier}`)
         .maybeSingle();
+      console.debug("[useClientPortal] client_portal_view result:", data, error);
       if (!error && data) {
         // Parse invoices/payments if present as JSON string
         let invoices: any[] = [];

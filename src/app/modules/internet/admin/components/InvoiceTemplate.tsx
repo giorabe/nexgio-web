@@ -48,13 +48,15 @@ export function InvoiceTemplate(props: {
 
   return (
     <div
-      // BLACK background around the invoice
+      // BLACK background around the invoice — make responsive and center the paper
       style={{
         background: "#0f0f0f",
         padding: 18,
         borderRadius: 12,
-        width: "fit-content",
-        maxWidth: "100%",
+        width: "100%",
+        boxSizing: "border-box",
+        display: "flex",
+        justifyContent: "center",
       }}
     >
       {/* WHITE invoice "paper" */}
@@ -64,8 +66,8 @@ export function InvoiceTemplate(props: {
           color: "#000000",
           borderRadius: 12,
           padding: 22,
-          width: 640,
-          maxWidth: "100%",
+          width: "100%",
+          maxWidth: 640,
           boxSizing: "border-box",
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"',
@@ -90,7 +92,7 @@ export function InvoiceTemplate(props: {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
             gap: 18,
             marginTop: 14,
             fontSize: 14,
