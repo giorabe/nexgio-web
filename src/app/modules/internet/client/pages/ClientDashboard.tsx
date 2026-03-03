@@ -1,12 +1,14 @@
 import { Wifi, TrendingUp, Calendar, AlertCircle, CreditCard } from "lucide-react";
 import { Button } from "@/app/shared/ui/button";
 import StatusBadge from "@/app/components/StatusBadge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/app/shared/ui/dialog";
+import { useState } from "react";
 import { useClientPortal } from "../hooks/useClientPortal";
 
 export default function ClientDashboard() {
   const { client, invoices, payments, loading, error } = useClientPortal();
-
-  console.log("CLIENT OBJECT:", client);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
 
   const clientData = {
     name: client?.name ?? client?.room ?? "Client",
@@ -25,25 +27,27 @@ export default function ClientDashboard() {
     invoiceDueDate: client?.invoice_due_date ?? "",  // FROM invoices
     nextDueDate: client?.next_due_date ?? "",        // FROM clients
   };
+  // Use current balance for payment dialog, no invoice number
+  const selectedAmount = clientData.balance;
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-400">{error}</div>;
 
   const invoiceDueLabel = clientData.invoiceDueDate
-  ? new Date(clientData.invoiceDueDate).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-  : "—";
+    ? new Date(clientData.invoiceDueDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
 
-const nextDueLabel = clientData.nextDueDate
-  ? new Date(clientData.nextDueDate).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-  : "—";
+  const nextDueLabel = clientData.nextDueDate
+    ? new Date(clientData.nextDueDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
 
   const invoiceActivities = (invoices ?? []).map((inv: any) => ({
     id: inv.id,
@@ -132,7 +136,15 @@ const nextDueLabel = clientData.nextDueDate
             ₱{clientData.balance.toLocaleString()}
           </p>
           <p className="text-[#A0A0A0] text-sm mb-3">Due Date: {invoiceDueLabel}</p>
-          <Button size="sm" className="w-full bg-[#FF9F43] hover:bg-[#FF9F43]/90 text-white">
+          <Button
+            size="sm"
+            className="w-full bg-[#FF9F43] hover:bg-[#FF9F43]/90 text-white"
+            onClick={() => {
+              setShowPaymentDialog(true);
+              setSelectedPaymentMethod(null);
+            }}
+            disabled={clientData.balance <= 0}
+          >
             Pay Now
           </Button>
         </div>
@@ -185,6 +197,63 @@ const nextDueLabel = clientData.nextDueDate
           )}
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="bg-[#1E1E1E] border-[#2A2A2A] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Payment Options</DialogTitle>
+            <DialogDescription className="text-sm text-[#A0A0A0]">
+              Select a payment method to proceed with the payment.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAmount > 0 && (
+            <div className="space-y-6">
+              <div className="p-4 bg-[#161616] rounded-lg">
+                <p className="text-[#A0A0A0] text-sm mb-1">Amount to Pay</p>
+                <p className="text-3xl font-bold text-[#F5C400]">
+                  ₱{selectedAmount.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <p className="font-semibold text-white">Select Payment Method</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {["GCash", "Cash"].map((method) => (
+                    <button
+                      key={method}
+                      onClick={() => setSelectedPaymentMethod(method)}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        selectedPaymentMethod === method
+                          ? "border-[#F5C400] bg-[#F5C400]/10"
+                          : "border-[#2A2A2A] bg-[#161616] hover:border-[#F5C400]/50"
+                      }`}
+                    >
+                      <CreditCard className="w-6 h-6 text-[#F5C400] mb-2" />
+                      <p className="text-white font-medium">{method}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Show GCash or Cash instructions based on selection */}
+              {selectedPaymentMethod === "GCash" && (
+                <div className="p-4 mb-4 bg-[#161616] rounded-lg border border-[#F5C400] text-white">
+                  <p className="font-semibold text-lg mb-1">GCash Payment Details</p>
+                  <p>Account Number: <span className="font-mono">09366665212</span></p>
+                  <p>Account Name: <span className="font-semibold">Jorge R.</span></p>
+                </div>
+              )}
+              {selectedPaymentMethod === "Cash" && (
+                <div className="p-4 mb-4 bg-[#161616] rounded-lg border border-[#F5C400] text-white">
+                  <p className="font-semibold text-lg mb-1">Cash Payment Instructions</p>
+                  <p>Please visit <span className="font-semibold">Room 4</span> or contact the admin first before making a payment.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Quick actions */}
     </div>
