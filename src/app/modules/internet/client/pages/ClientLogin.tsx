@@ -79,7 +79,7 @@ export default function ClientLogin() {
             {/* Logo and title */}
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#F5C400] to-[#F5C400]/80 mb-4 shadow-lg shadow-[#F5C400]/50">
-                <img src={Logo} alt="NexGio Logo" className="w-16 h-auto" />
+                <img src={Logo} alt="NexGio Logo" className="w-20 h-auto rounded-2xl" />
               </div>
               <h1 className="text-3xl font-bold text-white mb-2">Client Portal Login</h1>
               <p className="text-[#A0A0A0]">Access your NexGio internet account</p>

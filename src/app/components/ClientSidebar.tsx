@@ -59,7 +59,7 @@ export default function ClientSidebar({ onClose }: ClientSidebarProps) {
   };
 
   return (
-    <aside className="w-64 bg-[#161616] border-r border-[#2A2A2A] min-h-screen flex flex-col">
+    <aside className="w-64 bg-[#161616] border-r border-[#2A2A2A] fixed top-0 left-0 h-screen flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-[#2A2A2A]">
         <div className="flex items-center justify-between">
@@ -135,6 +135,7 @@ export default function ClientSidebar({ onClose }: ClientSidebarProps) {
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Logout</span>
         </button>
+        <div className="mt-4 text-center text-xs text-[#A0A0A0]">© 2026 NexGio</div>
       </div>
     </aside>
   );

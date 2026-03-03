@@ -40,7 +40,7 @@ export default function ClientPortalLayout() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 md:ml-64">
         {/* Header */}
         <header className="bg-[#161616] border-b border-[#2A2A2A] px-6 py-4 sticky top-0 z-40">
           <div className="flex items-center justify-between">
