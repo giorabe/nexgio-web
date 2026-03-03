@@ -165,7 +165,7 @@ const nextDueLabel = clientData.nextDueDate
                   <div>
                     <p className="text-white font-medium mb-1">{item.label}</p>
                     <p className="text-[#A0A0A0] text-sm">
-                      {item.date ? new Date(item.date).toLocaleString() : ""}
+                      {item.date ? new Date(item.date).toLocaleDateString() : ""}
                     </p>
                   </div>
                   <div className="text-right">

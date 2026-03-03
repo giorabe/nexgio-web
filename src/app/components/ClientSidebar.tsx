@@ -123,6 +123,7 @@ export default function ClientSidebar({ onClose }: ClientSidebarProps) {
             ))}
           </ul>
         </nav>
+        {/* Support Banner removed */}
       </div>
 
       {/* Logout - sticks to bottom */}

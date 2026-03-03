@@ -429,22 +429,22 @@ export default function ClientInvoices() {
                     </button>
                   ))}
                 </div>
-                {/* Payment instructions for selected method */}
-                {selectedPaymentMethod === "GCash" && (
-                  <div className="mt-4 p-4 bg-[#0F0F0F] rounded border border-[#2A2A2A]">
-                    <p className="text-[#A0A0A0] text-sm mb-1">Send payment to:</p>
-                    <div className="text-white font-semibold text-lg">Account Number: 09366665212</div>
-                    <div className="text-white font-semibold text-lg">Account Name: Jorge R.</div>
-                  </div>
-                )}
-                {selectedPaymentMethod === "Cash" && (
-                  <div className="mt-4 p-4 bg-[#0F0F0F] rounded border border-[#2A2A2A]">
-                    <p className="text-[#A0A0A0] text-sm mb-1">For cash payments:</p>
-                    <div className="text-white font-semibold text-lg">Please visit Room 4 or contact the admin first.</div>
-                  </div>
-                )}
               </div>
 
+              {/* Show GCash or Cash instructions based on selection */}
+              {selectedPaymentMethod === "GCash" && (
+                <div className="p-4 mb-4 bg-[#161616] rounded-lg border border-[#F5C400] text-white">
+                  <p className="font-semibold text-lg mb-1">GCash Payment Details</p>
+                  <p>Account Number: <span className="font-mono">09366665212</span></p>
+                  <p>Account Name: <span className="font-semibold">Jorge R.</span></p>
+                </div>
+              )}
+              {selectedPaymentMethod === "Cash" && (
+                <div className="p-4 mb-4 bg-[#161616] rounded-lg border border-[#F5C400] text-white">
+                  <p className="font-semibold text-lg mb-1">Cash Payment Instructions</p>
+                  <p>Please visit <span className="font-semibold">Room 4</span> or contact the admin first before making a payment.</p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

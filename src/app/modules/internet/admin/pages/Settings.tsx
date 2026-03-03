@@ -17,9 +17,9 @@ export default function Settings() {
     }
   }, [profile]);
 
-  // Password fields
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
-  const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
+  // Password fields (hidden/commented for client)
+  // const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
+  // const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
 
   const onSaveProfile = async () => {
     setProfileStatus("saving");
@@ -38,19 +38,19 @@ export default function Settings() {
     }
   };
 
-  const onChangePassword = async () => {
-    setPasswordStatus("saving");
-    try {
-      if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) throw new Error("New password must be at least 6 characters");
-      const res = await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-      if (!res.ok) throw new Error(res.error ?? "Unknown error");
-      setPasswordStatus("changed");
-      setPasswordForm({ currentPassword: "", newPassword: "" });
-      setTimeout(() => setPasswordStatus(null), 2000);
-    } catch (e: any) {
-      setPasswordStatus(`error: ${e?.message ?? String(e)}`);
-    }
-  };
+  // const onChangePassword = async () => {
+  //   setPasswordStatus("saving");
+  //   try {
+  //     if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) throw new Error("New password must be at least 6 characters");
+  //     const res = await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+  //     if (!res.ok) throw new Error(res.error ?? "Unknown error");
+  //     setPasswordStatus("changed");
+  //     setPasswordForm({ currentPassword: "", newPassword: "" });
+  //     setTimeout(() => setPasswordStatus(null), 2000);
+  //   } catch (e: any) {
+  //     setPasswordStatus(`error: ${e?.message ?? String(e)}`);
+  //   }
+  // };
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -95,6 +95,7 @@ export default function Settings() {
             </div>
           </div>
 
+          {/*
           <div className="space-y-2">
             <Label className="text-white">Change Password</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -102,11 +103,12 @@ export default function Settings() {
               <Input type="password" placeholder="New password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((s) => ({ ...s, newPassword: (e.target as HTMLInputElement).value }))} className="bg-[#161616] border-[#2A2A2A] text-white" />
             </div>
           </div>
+          */}
 
           <div className="flex items-center justify-end gap-3 pt-4">
-            <div className="text-sm text-[#A0A0A0]">{profileStatus ?? passwordStatus ?? (loading ? "loading..." : "")}</div>
+            <div className="text-sm text-[#A0A0A0]">{profileStatus ?? (loading ? "loading..." : "")}</div>
             <Button onClick={onSaveProfile} className="bg-[#F5C400] hover:bg-[#F5C400]/90 text-[#0F0F0F]">Save Profile Changes</Button>
-            <Button onClick={onChangePassword} className="bg-[#2B8AEB] hover:bg-[#2B8AEB]/90 text-white">Change Password</Button>
+            {/* <Button onClick={onChangePassword} className="bg-[#2B8AEB] hover:bg-[#2B8AEB]/90 text-white">Change Password</Button> */}
           </div>
         </div>
       </div>
