@@ -98,46 +98,47 @@ export default function ClientSidebar({ onClose }: ClientSidebarProps) {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <NavLink
-                to={item.path}
-                end={item.path === "/client/dashboard"}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    isActive
-                      ? "bg-[#F5C400] text-[#0F0F0F] font-semibold shadow-lg shadow-[#F5C400]/20"
-                      : "text-[#A0A0A0] hover:bg-[#2A2A2A] hover:text-white"
-                  }`
-                }
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      {/* Support Banner */}
-      <div className="p-4 mx-4 mb-4 bg-gradient-to-br from-[#F5C400]/10 to-[#F5C400]/5 border border-[#F5C400]/20 rounded-lg">
-        <p className="text-xs font-semibold text-[#F5C400] mb-1">Need Help?</p>
-        <p className="text-xs text-[#A0A0A0] mb-3">Contact our support team</p>
-        <button
-          className="w-full px-3 py-2 bg-[#F5C400] hover:bg-[#F5C400]/90 text-[#0F0F0F] text-xs font-semibold rounded-lg transition-colors"
-          aria-label="Get support"
-          title="Get support"
-        >
-          Get Support
-        </button>
+      {/* Navigation & Support Banner */}
+      <div className="flex-1 flex flex-col">
+        <nav className="p-4">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  end={item.path === "/client/dashboard"}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                      isActive
+                        ? "bg-[#F5C400] text-[#0F0F0F] font-semibold shadow-lg shadow-[#F5C400]/20"
+                        : "text-[#A0A0A0] hover:bg-[#2A2A2A] hover:text-white"
+                    }`
+                  }
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {/* Support Banner */}
+        <div className="p-4 mx-4 mb-4 bg-gradient-to-br from-[#F5C400]/10 to-[#F5C400]/5 border border-[#F5C400]/20 rounded-lg">
+          <p className="text-xs font-semibold text-[#F5C400] mb-1">Need Help?</p>
+          <p className="text-xs text-[#A0A0A0] mb-3">Contact our support team</p>
+          <button
+            className="w-full px-3 py-2 bg-[#F5C400] hover:bg-[#F5C400]/90 text-[#0F0F0F] text-xs font-semibold rounded-lg transition-colors"
+            aria-label="Get support"
+            title="Get support"
+          >
+            Get Support
+          </button>
+        </div>
       </div>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-[#2A2A2A]">
+      {/* Logout - sticks to bottom */}
+      <div className="p-4 border-t border-[#2A2A2A] mt-auto">
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#EA5455] hover:bg-[#EA5455]/10 transition-all w-full"
