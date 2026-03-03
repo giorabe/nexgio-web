@@ -696,7 +696,7 @@ export default function ClientList() {
 
       {/* View Details Dialog */}
       <Dialog open={viewOpen} onOpenChange={(o) => (o ? null : closeDetails())}>
-        <DialogContent className="bg-[#1E1E1E] border-[#2A2A2A] text-white max-w-2xl">
+        <DialogContent className="bg-[#1E1E1E] border-[#2A2A2A] text-white max-w-2xl w-full sm:w-[90vw] p-4 sm:p-8 overflow-y-auto max-h-[90vh]" style={{ minWidth: 0 }}>
           <DialogHeader>
             <DialogTitle className="text-white">
               {isEditing ? "Edit Client" : "Client Details"}
@@ -708,7 +708,7 @@ export default function ClientList() {
               {/* DETAILS MODE */}
               {!isEditing && (
                 <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-[#A0A0A0] text-sm">Client Name</p>
                       <p className="text-white font-semibold">{selectedClient.name}</p>
@@ -727,7 +727,7 @@ export default function ClientList() {
                     </div>
                   </div>
 
-                  <div className="border-t border-[#2A2A2A] pt-4 grid grid-cols-2 gap-4">
+                  <div className="border-t border-[#2A2A2A] pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-[#A0A0A0] text-sm">Tier</p>
                       <p className="text-white">{selectedClient.tier}</p>
@@ -806,7 +806,7 @@ export default function ClientList() {
                   </div>
 
                   {/* FOOTER BUTTONS (THIS is where Edit/Delete should be) */}
-                  <div className="pt-2 flex gap-3">
+                  <div className="pt-2 flex flex-col sm:flex-row gap-3">
                     <Button
                       type="button"
                       variant="outline"
@@ -886,7 +886,7 @@ export default function ClientList() {
                     saveEdit();
                   }}
                 >
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="editName" className="text-white">
                         Client Name
@@ -916,7 +916,7 @@ export default function ClientList() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="editContact" className="text-white">
                         Contact
@@ -946,7 +946,7 @@ export default function ClientList() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="editStartDate" className="text-white">
                         Start Date
@@ -977,7 +977,7 @@ export default function ClientList() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-white">Tier</Label>
                       <Select
@@ -1154,7 +1154,7 @@ export default function ClientList() {
                     </div>
                   </div>
 
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <Button
                       type="button"
                       variant="outline"
