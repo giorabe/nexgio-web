@@ -42,7 +42,7 @@ interface Client {
   tier: string;
   tierId: string;
   devices: number;
-  status: "active" | "late" | "suspended";
+  status: "active" | "late" | "suspended" | "terminated";
   contact: string;
   email: string;
   startDate: string; // YYYY-MM-DD
@@ -641,7 +641,7 @@ export default function ClientList() {
                   Devices
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0] min-w-[120px] whitespace-nowrap">
-                  Due Date
+                  Next Due
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-[#A0A0A0]">
                   Status
@@ -1046,6 +1046,7 @@ export default function ClientList() {
                           <SelectItem value="active">Active</SelectItem>
                           <SelectItem value="late">Late</SelectItem>
                           <SelectItem value="suspended">Suspended</SelectItem>
+                          <SelectItem value="terminated">Terminated</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
