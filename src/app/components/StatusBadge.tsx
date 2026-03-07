@@ -1,5 +1,5 @@
 interface StatusBadgeProps {
-  status: "active" | "late" | "suspended" | "paid" | "pending" | "overdue";
+  status: "active" | "late" | "suspended" | "paid" | "pending" | "overdue" | "terminated";
   children?: React.ReactNode;
 }
 
@@ -11,6 +11,7 @@ export default function StatusBadge({ status, children }: StatusBadgeProps) {
     paid: "bg-[#28C76F]/10 text-[#28C76F] border-[#28C76F]/20",
     pending: "bg-[#FF9F43]/10 text-[#FF9F43] border-[#FF9F43]/20",
     overdue: "bg-[#EA5455]/10 text-[#EA5455] border-[#EA5455]/20",
+    terminated: "bg-[#6C757D]/10 text-[#6C757D] border-[#6C757D]/20", // gray
   };
 
   return (

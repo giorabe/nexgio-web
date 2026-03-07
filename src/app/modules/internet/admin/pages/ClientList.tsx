@@ -61,6 +61,7 @@ export default function ClientList() {
   const { clients, loading, error, add, edit, remove, tiers } = useClients();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTier, setFilterTier] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   // Add Client modal (2 steps)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -103,14 +104,30 @@ export default function ClientList() {
 
 
   const filteredClients = useMemo(() => {
-    return clients.filter((client) => {
+    const matches = clients.filter((client) => {
       const matchesSearch =
         client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.room.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTier = filterTier === "all" || client.tier === filterTier;
-      return matchesSearch && matchesTier;
+      const matchesStatus = filterStatus === "all" || client.status === filterStatus;
+      return matchesSearch && matchesTier && matchesStatus;
     });
-  }, [clients, searchTerm, filterTier]);
+
+    // Sort by numeric room when possible, otherwise string compare
+    const parseRoom = (r: string) => {
+      const n = parseInt(r.replace(/[^0-9-]/g, ""), 10);
+      return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+    };
+
+    matches.sort((a, b) => {
+      const na = parseRoom(a.room ?? "");
+      const nb = parseRoom(b.room ?? "");
+      if (na !== nb) return na - nb;
+      return String(a.room).localeCompare(String(b.room));
+    });
+
+    return matches;
+  }, [clients, searchTerm, filterTier, filterStatus]);
 
   // Create tier options from tiers hook
   const tierOptions = useMemo(() => {
@@ -308,9 +325,27 @@ export default function ClientList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Tiers</SelectItem>
-              <SelectItem value="Basic">Basic</SelectItem>
-              <SelectItem value="Standard">Standard</SelectItem>
-              <SelectItem value="Premium">Premium</SelectItem>
+              {tierOptions.map((t) => (
+                <SelectItem key={t.id} value={t.name}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {/* Status Filter */}
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger
+              aria-label="Filter by status"
+              className="w-40 bg-[#161616] border-[#2A2A2A] text-white"
+            >
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="late">Late</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="terminated">Terminated</SelectItem>
             </SelectContent>
           </Select>
         </div>

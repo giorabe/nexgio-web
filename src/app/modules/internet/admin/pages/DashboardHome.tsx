@@ -33,6 +33,26 @@ export default function DashboardHome() {
     // no-op: keep component reactive to dashboard hook
   }, []);
 
+  function relativeTimeShortLocal(iso?: string) {
+    try {
+      if (!iso) return "";
+      const then = new Date(String(iso));
+      if (Number.isNaN(then.getTime())) return "";
+      const now = new Date();
+      const diff = Math.floor((now.getTime() - then.getTime()) / 1000);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      // For older items, show date in mm/dd/yy
+      const mm = String(then.getMonth() + 1).padStart(2, "0");
+      const dd = String(then.getDate()).padStart(2, "0");
+      const yy = String(then.getFullYear() % 100).padStart(2, "0");
+      return `${mm}/${dd}/${yy}`;
+    } catch (e) {
+      return "";
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Statistics Grid */}
@@ -46,7 +66,7 @@ export default function DashboardHome() {
         />
         <StatCard
           title="Active Connections"
-          value={loading ? "…" : String(data?.activeClients ?? 0)}
+          value={loading ? "…" : String((data?.activeClients ?? 0) + (data?.lateClients ?? 0))}
           icon={Wifi}
           trend={undefined}
           iconColor="#28C76F"
@@ -107,7 +127,7 @@ export default function DashboardHome() {
                       {activity.label}
                     </StatusBadge>
                   </td>
-                  <td className="px-6 py-4 text-[#A0A0A0]">{activity.relative ?? activity.dateISO}</td>
+                  <td className="px-6 py-4 text-[#A0A0A0]">{relativeTimeShortLocal(activity.dateISO) || activity.dateISO}</td>
                 </tr>
               ))}
             </tbody>
@@ -125,13 +145,22 @@ export default function DashboardHome() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-[#A0A0A0]">Active Connections</span>
-              <span className="text-white font-semibold">{loading ? "…" : String(data?.activeClients ?? 0)}</span>
+              <span className="text-white font-semibold">{loading ? "…" : String((data?.activeClients ?? 0) + (data?.lateClients ?? 0))}</span>
             </div>
-            <div className="w-full bg-[#161616] rounded-full h-2">
-              <div
-                className="bg-[#28C76F] h-2 rounded-full"
-                style={{ width: `${data ? Math.round(((data.activeClients ?? 0) / Math.max(1, data.totalClients ?? 1)) * 100) : 0}%` }}
-              />
+            <div className="w-full bg-[#161616] rounded-full h-2 flex overflow-hidden">
+              {(() => {
+                const total = Math.max(1, data?.totalClients ?? 1);
+                const active = data ? Math.round(((data.activeClients ?? 0) / total) * 100) : 0;
+                const late = data ? Math.round(((data.lateClients ?? 0) / total) * 100) : 0;
+                const activeStyle = { width: `${active}%`, backgroundColor: "#28C76F" } as any;
+                const lateStyle = { width: `${late}%`, backgroundColor: "#F5C400" } as any;
+                return (
+                  <>
+                    <div className="h-2" style={activeStyle} />
+                    <div className="h-2" style={lateStyle} />
+                  </>
+                );
+              })()}
             </div>
 
             <div className="flex items-center justify-between pt-2">

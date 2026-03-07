@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/app/shared/supabaseClient";
 import { signOut as signOutService } from "@/app/modules/internet/admin/services/auth.service";
 
-export default function RequireAuth({ children }: { children: React.ReactNode }) {
+export default function RequireAuth({
+  children,
+  redirectTo = "/",
+}: {
+  children: React.ReactNode;
+  redirectTo?: string;
+}) {
   const [loading, setLoading] = useState(true);
   const [authed, setAuthed] = useState(false);
   const navigate = useNavigate();
@@ -85,8 +91,14 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
     };
   }, []);
 
+  const location = useLocation();
+
   if (loading) return null;
-  if (!authed) return <Navigate to="/" replace />;
+  if (!authed) {
+    const next = encodeURIComponent(location.pathname + location.search);
+    const sep = redirectTo.includes("?") ? "&" : "?";
+    return <Navigate to={`${redirectTo}${sep}next=${next}`} replace />;
+  }
 
   return <>{children}</>;
 }

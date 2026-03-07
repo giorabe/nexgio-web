@@ -62,7 +62,8 @@ export function useDashboard() {
         const totalClients = clients.length;
         const activeClients = clients.filter((c: any) => (c.status ?? "").toLowerCase() === "active").length;
         const suspendedClients = clients.filter((c: any) => (c.status ?? "").toLowerCase() === "suspended").length;
-        const inactiveClients = totalClients - activeClients - suspendedClients;
+        const lateClients = clients.filter((c: any) => (c.status ?? "").toLowerCase() === "late").length;
+        const inactiveClients = totalClients - activeClients - suspendedClients - lateClients;
 
         // Monthly revenue: sum applied payments (full/partial) for current month
         const monthlyRevenuePaid = payments
@@ -144,6 +145,7 @@ export function useDashboard() {
         const out: DashboardData = {
           totalClients,
           activeClients,
+          lateClients,
           suspendedClients,
           inactiveClients,
           monthlyRevenuePaid: Number(monthlyRevenuePaid ?? 0),
@@ -237,7 +239,8 @@ export function useDashboard() {
       const totalClients = clients.length;
       const activeClients = clients.filter((c: any) => (c.status ?? "").toLowerCase() === "active").length;
       const suspendedClients = clients.filter((c: any) => (c.status ?? "").toLowerCase() === "suspended").length;
-      const inactiveClients = totalClients - activeClients - suspendedClients;
+      const lateClients = clients.filter((c: any) => (c.status ?? "").toLowerCase() === "late").length;
+      const inactiveClients = totalClients - activeClients - suspendedClients - lateClients;
 
       const pendingInvoicesCount = invoices.filter((inv) => Number(inv.balance_due ?? 0) > 0).length;
       const today = new Date();
@@ -255,6 +258,7 @@ export function useDashboard() {
       const out = {
         totalClients,
         activeClients,
+        lateClients,
         suspendedClients,
         inactiveClients,
         monthlyRevenuePaid: Number(monthlyRevenuePaid ?? 0),

@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import RequireAuth from "./layout/RequireAuth";
 
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import ServiceSelector from "./pages/ServiceSelector";
 
 import DashboardLayout from "./layout/DashboardLayout";
@@ -14,6 +15,7 @@ import InvoiceHistory from "./modules/internet/admin/pages/InvoiceHistory";
 import ReceiptHistory from "./modules/internet/admin/pages/ReceiptHistory";
 import PaymentsEntry from "./modules/internet/admin/pages/PaymentsEntry";
 import Settings from "./modules/internet/admin/pages/Settings";
+import AdminExpenses from "./modules/internet/admin/pages/AdminExpenses";
 
 // Client-side portal (public)
 import ClientPortalLayout from "./modules/internet/client/pages/ClientPortalLayout";
@@ -23,10 +25,12 @@ import ClientReceipts from "./modules/internet/client/pages/ClientReceipts";
 import ClientSettings from "./modules/internet/client/pages/ClientSettings";
 import ClientLogin from "./modules/internet/client/pages/ClientLogin";
 import ClientServiceSelector from "./modules/internet/client/pages/ClientServiceSelector";
+import RequireClientAuth from "./layout/RequireClientAuth";
 
 export const router = createBrowserRouter([
   { path: "/", element: <ClientServiceSelector /> },
   { path: "/login", element: <Login /> },
+  { path: "/reset-password", element: <ResetPassword /> },
   { path: "/admin", element: <ServiceSelector /> },
 
   // Admin login
@@ -47,6 +51,7 @@ export const router = createBrowserRouter([
       { path: "invoice", element: <Invoice /> },
       { path: "invoice-history", element: <InvoiceHistory /> },
       { path: "payments", element: <PaymentsEntry /> },
+      { path: "expenses", element: <AdminExpenses /> },
       { path: "receipts", element: <ReceiptHistory /> },
       { path: "settings", element: <Settings /> },
     ],
@@ -60,7 +65,7 @@ export const router = createBrowserRouter([
     element: <ClientPortalLayout />,
     children: [
       { index: true, element: <ClientServiceSelector /> },
-      { path: "dashboard", element: <ClientDashboard /> },
+      { path: "dashboard", element: <RequireClientAuth><ClientDashboard /></RequireClientAuth> },
       { path: "invoices", element: <ClientInvoices /> },
       { path: "receipts", element: <ClientReceipts /> },
       { path: "settings", element: <ClientSettings /> },

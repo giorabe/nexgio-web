@@ -40,7 +40,7 @@ export type ClientUI = {
   tier: string;     // tier name for display
   tierId: string;   // tier uuid
   devices: number;
-  status: "active" | "late" | "suspended";
+  status: "active" | "late" | "suspended" | "terminated";
   contact: string;
   email: string;
   startDate: string;  // YYYY-MM-DD

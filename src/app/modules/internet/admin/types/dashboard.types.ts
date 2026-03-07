@@ -10,6 +10,7 @@ export type DashboardData = {
   totalClients: number;
   activeClients: number;
   suspendedClients: number;
+  lateClients: number;
   inactiveClients: number;
 
   monthlyRevenuePaid: number;

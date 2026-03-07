@@ -72,7 +72,7 @@ export async function createClient(input: {
   room: string;
   tier_id: string;
   devices: number;
-  status: "active" | "late" | "suspended";
+  status: "active" | "late" | "suspended" | "terminated";
   contact: string;
   email: string;
   start_date: string;

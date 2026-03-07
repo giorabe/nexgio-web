@@ -29,3 +29,26 @@ export async function signOut() {
 export async function getSession() {
   return supabase.auth.getSession();
 }
+
+export async function recoverPassword(identifier: string, redirectTo?: string) {
+  const trimmed = identifier.trim();
+
+  const defaultRedirect = typeof window !== "undefined" ? `${window.location.origin}/reset-password` : undefined;
+  const redirect = redirectTo ?? defaultRedirect;
+
+  if (trimmed.includes("@")) {
+    return supabase.auth.resetPasswordForEmail(trimmed, redirect ? { redirectTo: redirect } : undefined);
+  }
+
+  const { data, error } = await supabase
+    .from("admin_profiles")
+    .select("email")
+    .eq("username", trimmed)
+    .single();
+
+  if (error || !data?.email) {
+    return { data: null, error: new Error("Username not found") } as const;
+  }
+
+  return supabase.auth.resetPasswordForEmail(data.email, redirect ? { redirectTo: redirect } : undefined);
+}

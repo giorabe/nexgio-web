@@ -3,7 +3,7 @@ import type { ClientRow, ClientRowPatch, ClientUI } from "../types/client.types"
 import { createClient, deleteClient, fetchClients, updateClient } from "../services/clients.service";
 import { useTiers } from "./useTiers";
 function toClientStatus(v: string): ClientUI["status"] {
-  if (v === "active" || v === "late" || v === "suspended") return v;
+  if (v === "active" || v === "late" || v === "suspended" || v === "terminated") return v;
   return "active";
 }
 
@@ -107,7 +107,7 @@ export function useClients() {
     room?: string;
     tierId?: string;
     devices?: number;
-    status?: "active" | "late" | "suspended";
+    status?: "active" | "late" | "suspended" | "terminated";
     contact?: string;
     email?: string;
     startDate?: string;
