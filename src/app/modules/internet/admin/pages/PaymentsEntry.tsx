@@ -113,9 +113,11 @@ export default function PaymentsEntry() {
         ? invoices.find((i) => i.id === selectedInvoiceId) ?? null
         : null;
 
-      // If paymentType is Collection we do not require an invoice selection;
-      // Collection payments are treated as an advance/credit to the client.
-      if (paymentType !== "Collection" && !invoice) {
+      // Treat "Collection" case-insensitively; when Collection is selected
+      // we do not require an invoice selection. Collections are recorded as
+      // advance payments (no invoice_id) and only affect total collected.
+      const isCollection = String(paymentType || "").trim().toLowerCase() === "collection";
+      if (!isCollection && !invoice) {
         setMessage("Please select an invoice to pay.");
         return;
       }
@@ -123,8 +125,8 @@ export default function PaymentsEntry() {
       if (entered <= 0) return setMessage("Payment amount must be > 0");
       const isoDate = toISODate(dateText);
       if (!isoDate) return setMessage("Invalid date. Use MM-DD-YYYY");
-      // Map UI payment type "Collection" to backend "advance" payment_type
-      const backendPaymentType = paymentType === "Collection" ? "advance" : (paymentType as any);
+      // Map UI payment type "Collection" (case-insensitive) to backend "advance"
+      const backendPaymentType = isCollection ? "advance" : (paymentType as any);
 
       const res = await createPayment({
         client_id: selectedClientId,
@@ -141,7 +143,7 @@ export default function PaymentsEntry() {
         return;
       }
 
-      if (paymentType === "Collection") {
+      if (isCollection) {
         // Collection: recorded as an advance/payment record. Do not modify client deposit here.
         setSuccessMessage("Collection recorded");
       } else {
