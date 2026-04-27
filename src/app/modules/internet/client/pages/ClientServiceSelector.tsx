@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/app/shared/ui/button";
-import { Wifi, Wrench, Printer, Repeat } from "lucide-react";
+import { Wifi, Wrench, Printer, Repeat, Palette } from "lucide-react";
 import Logo from "@/assets/NexGio LOGO B.png";
 
 export default function ClientServiceSelector() {
@@ -25,10 +25,10 @@ export default function ClientServiceSelector() {
       disabled: true,
     },
     {
-      id: "printing",
-      name: "Printing Services",
-      description: "View printing jobs and order history",
-      icon: Printer,
+      id: "graphics",
+      name: "Graphics Services",
+      description: "View graphics jobs and order history",
+      icon: Palette,
       color: "#FF9F43",
       path: "#",
       disabled: true,
@@ -36,8 +36,34 @@ export default function ClientServiceSelector() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#161616] to-[#0F0F0F] flex items-center justify-center p-6">
-      <div className="max-w-5xl w-full relative">
+    <div className="min-h-screen w-full relative overflow-hidden bg-[#0F0F0F] flex items-center justify-center p-6">
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `
+              linear-gradient(#F5C400 1px, transparent 1px),
+              linear-gradient(90deg, #F5C400 1px, transparent 1px)
+            `,
+            backgroundSize: "50px 50px",
+          }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: "radial-gradient(circle at center, transparent 0%, #0F0F0F 70%)",
+          }}
+        />
+      </div>
+
+      <div className="max-w-5xl w-full relative z-10">
+        {/* Home button (top-left) */}
+        <div className="absolute top-4 left-4">
+          <Link to="/" className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-[#2A2A2A] text-white rounded-full hover:bg-white/10 transition-colors">
+            <img src={Logo} alt="NexGio" className="w-5 h-5 rounded-sm" />
+            <span className="text-sm font-medium">Home</span>
+          </Link>
+        </div>
         {/* Switch to Admin button (desktop: top-right, mobile: floating icon) */}
         <div className="hidden md:block absolute top-4 right-4">
           <button
@@ -67,12 +93,12 @@ export default function ClientServiceSelector() {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-[#F5C400] flex items-center justify-center shadow-lg shadow-[#F5C400]/20">
+            <div className="w-16 md:w-20 h-16 md:h-20 rounded-2xl bg-[#F5C400] flex items-center justify-center shadow-lg shadow-[#F5C400]/20">
               <img src={Logo} alt="NexGio Logo" className="w-20 h-auto rounded-lg"/>
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-3">Welcome to NexGio Client Portal</h1>
-          <p className="text-lg text-[#A0A0A0]">
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-3">Welcome to NexGio Client Portal</h1>
+          <p className="text-sm md:text-lg text-[#A0A0A0]">
             Select a service to manage your account
           </p>
         </div>

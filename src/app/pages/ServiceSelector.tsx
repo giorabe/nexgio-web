@@ -82,9 +82,9 @@ export default function ServiceSelector() {
     },
     {
       icon: <Palette className="w-8 h-8" />,
-      title: "Design Services",
+      title: "Graphics Services",
       description:
-        "Manage design orders and creative projects for your clients.",
+        "Manage graphics jobs and creative projects for your clients.",
       path: "#",
     },
     {

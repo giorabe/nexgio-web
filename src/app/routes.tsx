@@ -4,6 +4,7 @@ import RequireAuth from "./layout/RequireAuth";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import ServiceSelector from "./pages/ServiceSelector";
+import Homepage from "./pages/Homepage";
 
 import DashboardLayout from "./layout/DashboardLayout";
 
@@ -28,7 +29,7 @@ import ClientServiceSelector from "./modules/internet/client/pages/ClientService
 import RequireClientAuth from "./layout/RequireClientAuth";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <ClientServiceSelector /> },
+  { path: "/", element: <Homepage /> },
   { path: "/login", element: <Login /> },
   { path: "/reset-password", element: <ResetPassword /> },
   { path: "/admin", element: <ServiceSelector /> },
