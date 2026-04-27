@@ -41,7 +41,8 @@ export default function AdminExpenses() {
         const serverSum = rows
           .filter((p) => {
             const t = String(p?.payment_type ?? "").toLowerCase();
-            return t === "full" || t === "partial";
+            // include advance payments (Collections) so they show in Total Collected
+            return t === "full" || t === "partial" || t === "advance";
           })
           .reduce((acc: number, r: any) => acc + Number(r.amount ?? 0), 0);
         if (mounted) setServerCollected(serverSum);
