@@ -357,6 +357,7 @@ export default function PaymentsEntry() {
                       <SelectItem value="Cash">Cash</SelectItem>
                       <SelectItem value="GCash">GCash</SelectItem>
                       <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="ADMIN CREDIT">ADMIN CREDIT</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
