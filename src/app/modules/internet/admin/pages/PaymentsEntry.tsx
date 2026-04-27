@@ -318,6 +318,7 @@ export default function PaymentsEntry() {
                     <SelectContent>
                       <SelectItem value="full">Full</SelectItem>
                       <SelectItem value="partial">Partial</SelectItem>
+                      <SelectItem value="Collection">Collection</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
