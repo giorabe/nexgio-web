@@ -22,7 +22,7 @@ import {
   allocatePaymentToInvoices,
 } from "../services/payments.service";
 
-import { updateClient } from "../services/clients.service";
+// no client deposit update for Collection payments — Collections only affect Total Collected
 import type { InvoiceRow } from "../types/invoice.types";
 import SuccessModal from "@/app/shared/components/modals/SuccessModal";
 
@@ -42,7 +42,8 @@ export default function PaymentsEntry() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
-  const [paymentType, setPaymentType] = useState<"full" | "partial">("full");
+  // allow other string values (e.g. "Collection") from the UI
+  const [paymentType, setPaymentType] = useState<string>("full");
   const [amount, setAmount] = useState<string>("0");
   const [method, setMethod] = useState<string>("Cash");
 
@@ -112,7 +113,9 @@ export default function PaymentsEntry() {
         ? invoices.find((i) => i.id === selectedInvoiceId) ?? null
         : null;
 
-      if (!invoice) {
+      // If paymentType is Collection we do not require an invoice selection;
+      // Collection payments are treated as an advance/credit to the client.
+      if (paymentType !== "Collection" && !invoice) {
         setMessage("Please select an invoice to pay.");
         return;
       }
@@ -120,11 +123,13 @@ export default function PaymentsEntry() {
       if (entered <= 0) return setMessage("Payment amount must be > 0");
       const isoDate = toISODate(dateText);
       if (!isoDate) return setMessage("Invalid date. Use MM-DD-YYYY");
-      // Only allow payment for selected invoice
+      // Map UI payment type "Collection" to backend "advance" payment_type
+      const backendPaymentType = paymentType === "Collection" ? "advance" : (paymentType as any);
+
       const res = await createPayment({
         client_id: selectedClientId,
-        invoice_id: invoice.id,
-        payment_type: paymentType,
+        invoice_id: invoice ? invoice.id : null,
+        payment_type: backendPaymentType as any,
         amount: entered,
         payment_date: isoDate,
         payment_method: method,
@@ -135,7 +140,14 @@ export default function PaymentsEntry() {
         setMessage(res.error.message ?? "Failed to record payment");
         return;
       }
-      setSuccessMessage("Payment recorded for selected invoice");
+
+      if (paymentType === "Collection") {
+        // Collection: recorded as an advance/payment record. Do not modify client deposit here.
+        setSuccessMessage("Collection recorded");
+      } else {
+        setSuccessMessage("Payment recorded for selected invoice");
+      }
+
       setSuccessOpen(true);
 
       await reloadClients();

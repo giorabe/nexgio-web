@@ -15,6 +15,9 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
 
+    // Silence deprecation warnings for options that will change in TS7.0
+    "ignoreDeprecations": "6.0",
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
